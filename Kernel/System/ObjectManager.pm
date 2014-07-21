@@ -41,6 +41,8 @@ use Carp qw(confess);
 # used to generate better error messages.
 our $CurrentObject;
 
+use constant OM_TRACE => ($ENV{OTRS_OM_TRACE} // 0);
+
 =head1 NAME
 
 Kernel::System::ObjectManager - object and dependency manager
@@ -95,6 +97,10 @@ sub new {
     $Self->{Objects} = {};
     $Self->{Config}  = {};
 
+    if (OM_TRACE) {
+        $Self->{ReverseConfigIsDirty} = 1;
+    }
+
     return $Self;
 }
 
@@ -114,12 +120,32 @@ L<Kernel::System::Ticket> object.
 sub Get {
 
     # Optimize the heck out of the common case:
-    return $_[0]->{Objects}->{ $_[1] } if $_[1] && $_[0]->{Objects}->{ $_[1] };
+    return $_[0]->{Objects}->{ $_[1] } if $_[1] && $_[0]->{Objects}->{ $_[1] } && !OM_TRACE;
 
     # OK, not so easy
     my ( $Self, $ObjectName ) = @_;
 
     die "Error: Missing parameter (object name)\n" if !$ObjectName;
+
+    if ( OM_TRACE ) {
+        if ( $Self->{ReverseConfigIsDirty} ) {
+            $Self->_BuildReverseConfig();
+        }
+        my ($Package, undef, undef, $Routine) = caller(1);
+        if ( $Routine ) {
+            $Routine =~ s/^(.*):://;
+            my $Via = $1;
+            if ( $Routine eq 'new' && $Self->{ReverseConfig}{$Package} ) {
+                my $CallerPackageName = $Self->{ReverseConfig}{$Package};
+                my $ForwardConfig     = $Self->ObjectConfigGet(
+                    Object => $CallerPackageName,
+                );
+                if (! grep { $_ eq $ObjectName } @{ $ForwardConfig->{Dependencies} } ) {
+                    print STDERR "CONFIG ERROR: $CallerPackageName (via $Via) depends on $ObjectName, but doesn't declare that depencency!\n";
+                }
+            }
+        }
+    }
 
     # record the object we are about to retrieve to potentially
     # build better error messages
@@ -235,6 +261,10 @@ sub ObjectRegister {
 
     my $Object = delete $Param{Object};
     $Self->{Objects}->{ $Param{Name} } = $Object if $Object;
+
+    if (OM_TRACE) {
+        $Self->{ReverseConfigIsDirty} = 1;
+    }
 
     my $Name = delete $Param{Name};
     $Self->{Config}->{$Name} = \%Param;
@@ -484,6 +514,23 @@ sub DESTROY {
     # Make sure $Kernel::OM is still available in the destructor
     local $Kernel::OM = $Self;
     $Self->ObjectsDiscard();
+}
+
+sub _BuildReverseConfig {
+    my ( $Self ) = @_;
+
+    if ( $Self->{Objects}{ConfigObject} ) {
+        $Self->{ReverseConfigIsDirty} = 0;
+        my $CoreConfig = $Self->{Objects}{ConfigObject}->Get('Objects');
+        for my $Key (sort keys %$CoreConfig) {
+            $Self->{ReverseConfig}{ $CoreConfig->{$Key}->{ClassName} } = $Key;
+        }
+    }
+
+    my %Config = %{ $Self->{Config} };
+    for my $Key (sort keys %Config) {
+        $Self->{ReverseConfig}{ $Config{$Key}{ClassName} } = $Key;
+    }
 }
 
 1;
