@@ -131,17 +131,16 @@ sub Get {
         if ( $Self->{ReverseConfigIsDirty} ) {
             $Self->_BuildReverseConfig();
         }
-        my ($Package, undef, undef, $Routine) = caller(1);
-        if ( $Routine ) {
-            $Routine =~ s/^(.*):://;
-            my $Via = $1;
+        my $Routine = (caller 1)[3];
+        if ( $Routine && $Routine =~ s/^(.*)::// ) {
+            my $Package = $1;
             if ( $Routine eq 'new' && $Self->{ReverseConfig}{$Package} ) {
                 my $CallerPackageName = $Self->{ReverseConfig}{$Package};
                 my $ForwardConfig     = $Self->ObjectConfigGet(
                     Object => $CallerPackageName,
                 );
                 if (! grep { $_ eq $ObjectName } @{ $ForwardConfig->{Dependencies} } ) {
-                    print STDERR "CONFIG ERROR: $CallerPackageName (via $Via) depends on $ObjectName, but doesn't declare that depencency!\n";
+                    print STDERR "CONFIG ERROR: $CallerPackageName depends on $ObjectName, but doesn't declare that depencency!\n";
                 }
             }
         }
