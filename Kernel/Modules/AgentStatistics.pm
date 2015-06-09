@@ -44,7 +44,7 @@ sub new {
         }
     }
 
-    # create stats object
+    # Create stats object (requires UserID).
     $Kernel::OM->ObjectParamAdd(
         'Kernel::System::Stats' => {
             UserID => $Param{UserID},
@@ -66,6 +66,9 @@ sub Run {
     }
     elsif ( $Self->{Subaction} eq 'Export' ) {
         return $Self->ExportAction();
+    }
+    elsif ( $Self->{Subaction} eq 'Delete' ) {
+        return $Self->DeleteAction();
     }
 
     # No (known) subaction?
@@ -178,7 +181,7 @@ sub ImportScreen {
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
     my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
 
-    if (!$Self->{AccessRw}) {
+    if ( !$Self->{AccessRw} ) {
         return $LayoutObject->NoPermission( WithHeader => 'yes' )
     }
 
@@ -235,13 +238,15 @@ sub ImportScreen {
 }
 
 sub ExportAction {
-    my ($Self, %Param) = @_;
+    my ( $Self, %Param ) = @_;
 
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
 
-    if (!$Self->{AccessRw}) {
+    if ( !$Self->{AccessRw} ) {
         return $LayoutObject->NoPermission( WithHeader => 'yes' );
     }
+
+    $LayoutObject->ChallengeTokenCheck();
 
     my $StatID = $Kernel::OM->Get('Kernel::System::Web::Request')->GetParam( Param => 'StatID' );
     if ( !$StatID ) {
@@ -257,4 +262,25 @@ sub ExportAction {
     );
 }
 
+sub DeleteAction {
+    my ( $Self, %Param ) = @_;
+
+    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+    my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
+
+    if ( !$Self->{AccessRw} ) {
+        return $LayoutObject->NoPermission( WithHeader => 'yes' );
+    }
+
+    my $StatID = $ParamObject->GetParam( Param => 'StatID' );
+    if ( !$StatID ) {
+        return $LayoutObject->ErrorScreen( Message => 'Delete: Get no StatID!' );
+    }
+
+    # challenge token check for write action
+    $LayoutObject->ChallengeTokenCheck();
+    $Self->{StatsObject}->StatsDelete( StatID => $StatID );
+    return $LayoutObject->Redirect( OP => 'Action=AgentStatistics;Subaction=Overview' );
+
+}
 1;
