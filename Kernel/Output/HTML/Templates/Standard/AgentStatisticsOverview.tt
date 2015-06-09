@@ -30,7 +30,7 @@
     <div class="ContentColumn">
         <div class="WidgetSimple">
             <div class="Header">
-                <h2>[% Translate("List") | html %]</h2>
+                <h2>[% Translate("Statistics") | html %]</h2>
             </div>
             <div class="Content">
                 <span class="Pagination">
