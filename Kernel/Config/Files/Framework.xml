@@ -5374,6 +5374,34 @@ via the Preferences button after logging in.
             </FrontendModuleReg>
         </Setting>
     </ConfigItem>
+    <ConfigItem Name="Frontend::Module###AgentStatistics" Required="0" Valid="1">
+        <Description Translatable="1">Frontend module registration for the agent interface.</Description>
+        <Group>Framework</Group>
+        <SubGroup>Frontend::Agent::ModuleRegistration</SubGroup>
+        <Setting>
+            <FrontendModuleReg>
+                <Title Translatable="1">Statistics</Title>
+                <Group>stats</Group>
+                <GroupRo>stats</GroupRo>
+                <Description>Statistics</Description>
+                <NavBarName>Statistics</NavBarName>
+                <NavBar>
+                    <Name Translatable="1">Statistics</Name>
+                    <Link>Action=AgentStatistics;Subaction=Overview</Link>
+                    <LinkOption></LinkOption>
+                    <NavBar>Statistics</NavBar>
+                    <Type>Menu</Type>
+                    <Description Translatable="1"></Description>
+                    <Prio>8500</Prio>
+                    <Block>ItemArea</Block>
+                    <AccessKey></AccessKey>
+                </NavBar>
+                <Loader>
+                    <JavaScript>Core.Agent.Stats.js</JavaScript>
+                </Loader>
+            </FrontendModuleReg>
+        </Setting>
+    </ConfigItem>
     <ConfigItem Name="Stats::StatsHook" Required="1" Valid="1">
         <Description Translatable="1">Sets the stats hook.</Description>
         <Group>Framework</Group>
