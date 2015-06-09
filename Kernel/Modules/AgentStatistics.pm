@@ -38,9 +38,9 @@ sub new {
     }
 
     # AccessRw controls the adding/editing of statistics.
-    for my $Transfer (qw( AccessRw RequestedURL)) {
-        if ( $Param{$Transfer} ) {
-            $Self->{$Transfer} = $Param{$Transfer};
+    for my $Param (qw( AccessRw RequestedURL)) {
+        if ( $Param{$Param} ) {
+            $Self->{$Param} = $Param{$Param};
         }
     }
 
@@ -63,6 +63,9 @@ sub Run {
     }
     elsif ( $Self->{Subaction} eq 'Import' ) {
         return $Self->ImportScreen();
+    }
+    elsif ( $Self->{Subaction} eq 'Export' ) {
+        return $Self->ExportAction();
     }
 
     # No (known) subaction?
@@ -175,15 +178,13 @@ sub ImportScreen {
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
     my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
 
+    if (!$Self->{AccessRw}) {
+        return $LayoutObject->NoPermission( WithHeader => 'yes' )
+    }
+
     my %Error;
-
-    # permission check
-    return $LayoutObject->NoPermission( WithHeader => 'yes' ) if !$Self->{AccessRw};
-
-    # get params
     my $Status = $ParamObject->GetParam( Param => 'Status' );
 
-    # importing
     if ( $Status && $Status eq 'Action' ) {
 
         # challenge token check for write action
@@ -207,7 +208,7 @@ sub ImportScreen {
 
                 # redirect to configure
                 return $LayoutObject->Redirect(
-                    OP => "Action=AgentStats;Subaction=Edit;StatID=$StatID"
+                    OP => "Action=AgentStatistics;Subaction=Edit;StatID=$StatID"
                 );
             }
             else {
@@ -221,7 +222,6 @@ sub ImportScreen {
         }
     }
 
-    # show import form
     my $Output = $LayoutObject->Header( Title => 'Import' );
     $Output .= $LayoutObject->NavigationBar();
     $Output .= $LayoutObject->Output(
@@ -234,8 +234,27 @@ sub ImportScreen {
     return $Output;
 }
 
-=end Internal:
+sub ExportAction {
+    my ($Self, %Param) = @_;
 
-=cut
+    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+
+    if (!$Self->{AccessRw}) {
+        return $LayoutObject->NoPermission( WithHeader => 'yes' );
+    }
+
+    my $StatID = $Kernel::OM->Get('Kernel::System::Web::Request')->GetParam( Param => 'StatID' );
+    if ( !$StatID ) {
+        return $LayoutObject->ErrorScreen( Message => 'Export: Need StatID!' );
+    }
+
+    my $ExportFile = $Self->{StatsObject}->Export( StatID => $StatID );
+
+    return $LayoutObject->Attachment(
+        Filename    => $ExportFile->{Filename},
+        Content     => $ExportFile->{Content},
+        ContentType => 'text/xml',
+    );
+}
 
 1;
