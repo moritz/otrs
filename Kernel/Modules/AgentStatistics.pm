@@ -13,7 +13,14 @@ use warnings;
 
 use List::Util qw( first );
 
+#use Kernel::Language qw(Translatable);
+
 our $ObjectManagerDisabled = 1;
+
+# TODO remove after notification merge in master
+sub Translatable {
+    return shift;
+}
 
 sub new {
     my ( $Type, %Param ) = @_;
@@ -53,6 +60,9 @@ sub Run {
 
     if ( $Self->{Subaction} eq 'Overview' ) {
         return $Self->OverviewScreen();
+    }
+    elsif ( $Self->{Subaction} eq 'Import' ) {
+        return $Self->ImportScreen();
     }
 
     # No (known) subaction?
@@ -154,6 +164,71 @@ sub OverviewScreen {
             AccessRw => $Self->{AccessRw},
         },
         TemplateFile => 'AgentStatisticsOverview',
+    );
+    $Output .= $LayoutObject->Footer();
+    return $Output;
+}
+
+sub ImportScreen {
+    my ( $Self, %Param ) = @_;
+
+    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+    my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
+
+    my %Error;
+
+    # permission check
+    return $LayoutObject->NoPermission( WithHeader => 'yes' ) if !$Self->{AccessRw};
+
+    # get params
+    my $Status = $ParamObject->GetParam( Param => 'Status' );
+
+    # importing
+    if ( $Status && $Status eq 'Action' ) {
+
+        # challenge token check for write action
+        $LayoutObject->ChallengeTokenCheck();
+
+        my $UploadFile = $ParamObject->GetParam( Param => 'File' );
+        if ($UploadFile) {
+            my %UploadStuff = $ParamObject->GetUploadAll(
+                Param    => 'File',
+                Encoding => 'Raw'
+            );
+            if ( $UploadStuff{Content} =~ m{<otrs_stats>}x ) {
+                my $StatID = $Self->{StatsObject}->Import(
+                    Content => $UploadStuff{Content},
+                );
+
+                if ($StatID) {
+                    $Error{FileServerError}        = 'ServerError';
+                    $Error{FileServerErrorMessage} = Translatable("Statistic could not be imported.");
+                }
+
+                # redirect to configure
+                return $LayoutObject->Redirect(
+                    OP => "Action=AgentStats;Subaction=Edit;StatID=$StatID"
+                );
+            }
+            else {
+                $Error{FileServerError}        = 'ServerError';
+                $Error{FileServerErrorMessage} = Translatable("Please upload a valid statistic file.");
+            }
+        }
+        else {
+            $Error{FileServerError}        = 'ServerError';
+            $Error{FileServerErrorMessage} = Translatable("This field is required.");
+        }
+    }
+
+    # show import form
+    my $Output = $LayoutObject->Header( Title => 'Import' );
+    $Output .= $LayoutObject->NavigationBar();
+    $Output .= $LayoutObject->Output(
+        TemplateFile => 'AgentStatisticsImport',
+        Data         => {
+            %Error,
+        },
     );
     $Output .= $LayoutObject->Footer();
     return $Output;
