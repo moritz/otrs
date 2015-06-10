@@ -70,6 +70,9 @@ sub Run {
     elsif ( $Self->{Subaction} eq 'Delete' ) {
         return $Self->DeleteAction();
     }
+    elsif ( $Self->{Subaction} eq 'Edit' ) {
+        return $Self->EditScreen();
+    }
 
     # No (known) subaction?
     return $Kernel::OM->Get('Kernel::Output::HTML::Layout')->ErrorScreen( Message => 'Invalid Subaction.' );
@@ -281,6 +284,164 @@ sub DeleteAction {
     $LayoutObject->ChallengeTokenCheck();
     $Self->{StatsObject}->StatsDelete( StatID => $StatID );
     return $LayoutObject->Redirect( OP => 'Action=AgentStatistics;Subaction=Overview' );
-
 }
+
+sub EditScreen {
+    my ( $Self, %Param ) = @_;
+
+    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+    my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
+    my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
+
+    # permission check
+    return $LayoutObject->NoPermission( WithHeader => 'yes' ) if !$Self->{AccessRw};
+
+    # get param
+    if ( !( $Param{StatID} = $ParamObject->GetParam( Param => 'StatID' ) ) ) {
+        return $LayoutObject->ErrorScreen(
+            Message => 'EditSpecification: Need StatID!',
+        );
+    }
+
+    my $Stat = $Self->{StatsObject}->StatsGet( StatID => $Param{StatID} );
+
+    my %Frontend;
+    $Frontend{GeneralSpecificationsWidget} = $Self->_GeneralSpecificationsWidget(
+        StatID => $Stat->{StatID},
+    );
+
+    my $Output = $LayoutObject->Header( Title => 'Edit' );
+    $Output .= $LayoutObject->NavigationBar();
+    $Output .= $LayoutObject->Output(
+        TemplateFile => 'AgentStatisticsEdit',
+        Data         => {
+            %Frontend,
+            %{$Stat},
+        },
+    );
+    $Output .= $LayoutObject->Footer();
+    return $Output;
+}
+
+sub _GeneralSpecificationsWidget {
+    my ( $Self, %Param ) = @_;
+
+    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+    my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
+    my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
+
+    my $Stat;
+    if ( $Param{StatID} ) {
+        $Stat = $Self->{StatsObject}->StatsGet( StatID => $Param{StatID} );
+    }
+    else {
+        $Stat->{StatID}     = 'new';
+        $Stat->{StatNumber} = '';
+        $Stat->{Valid}      = 1;
+    }
+
+    my %Frontend;
+
+    # create selectboxes 'Cache', 'SumRow', 'SumCol', and 'Valid'
+    for my $Key (qw(Cache ShowAsDashboardWidget SumRow SumCol)) {
+        $Frontend{ 'Select' . $Key } = $LayoutObject->BuildSelection(
+            Data => {
+                0 => 'No',
+                1 => 'Yes'
+            },
+            SelectedID => $Stat->{$Key} || 0,
+            Name => $Key,
+        );
+    }
+
+    # If this is a new stat, assume that it does not support the dashboard widget at the start.
+    #   This is corrected by a call to AJAXUpdate when the page loads and when the user makes changes.
+    if ( $Stat->{StatID} eq 'new' || !$Stat->{ObjectBehaviours}->{ProvidesDashboardWidget} ) {
+        $Frontend{'SelectShowAsDashboardWidget'} = $LayoutObject->BuildSelection(
+            Data => {
+                0 => 'No (not supported)',
+            },
+            SelectedID => 0,
+            Name       => 'ShowAsDashboardWidget',
+        );
+    }
+
+    $Frontend{SelectValid} = $LayoutObject->BuildSelection(
+        Data => {
+            0 => 'invalid',
+            1 => 'valid',
+        },
+        SelectedID => $Stat->{Valid},
+        Name       => 'Valid',
+    );
+
+    # create multiselectboxes 'permission'
+    my %Permission = (
+        Data        => { $Kernel::OM->Get('Kernel::System::Group')->GroupList( Valid => 1 ) },
+        Name        => 'Permission',
+        Class       => 'Validate_Required',
+        Multiple    => 1,
+        Size        => 5,
+        Translation => 0,
+    );
+    if ( $Stat->{Permission} ) {
+        $Permission{SelectedID} = $Stat->{Permission};
+    }
+    else {
+        $Permission{SelectedValue} = $ConfigObject->Get('Stats::DefaultSelectedPermissions');
+    }
+    $Stat->{SelectPermission} = $LayoutObject->BuildSelection(%Permission);
+
+    # create multiselectboxes 'format'
+    my $GDAvailable;
+    my $AvailableFormats = $ConfigObject->Get('Stats::Format');
+
+    # check availability of packages
+    for my $Module ( 'GD', 'GD::Graph' ) {
+        $GDAvailable = ( $Kernel::OM->Get('Kernel::System::Main')->Require($Module) ) ? 1 : 0;
+    }
+
+    # if the GD package is not installed, all the graph options will be disabled
+    if ( !$GDAvailable ) {
+        my @FormatData = map {
+            Key          => $_,
+                Value    => $AvailableFormats->{$_},
+                Disabled => ( ( $_ =~ m/GD/gi ) ? 1 : 0 ),
+        }, keys %{$AvailableFormats};
+
+        $AvailableFormats = \@FormatData;
+        $LayoutObject->Block( Name => 'PackageUnavailableMsg' );
+    }
+
+    $Stat->{SelectFormat} = $LayoutObject->BuildSelection(
+        Data       => $AvailableFormats,
+        Name       => 'Format',
+        Class      => 'Validate_Required',
+        Multiple   => 1,
+        Size       => 5,
+        SelectedID => $Stat->{Format}
+            || $ConfigObject->Get('Stats::DefaultSelectedFormat'),
+    );
+
+    # create multiselectboxes 'graphsize'
+    $Stat->{SelectGraphSize} = $LayoutObject->BuildSelection(
+        Data        => $ConfigObject->Get('Stats::GraphSize'),
+        Name        => 'GraphSize',
+        Multiple    => 1,
+        Size        => 3,
+        SelectedID  => $Stat->{GraphSize},
+        Translation => 0,
+        Disabled    => ( first { $_ =~ m{^GD::}smx } @{ $Stat->{GraphSize} } ) ? 0 : 1,
+    );
+
+    my $Output .= $LayoutObject->Output(
+        TemplateFile => 'AgentStatistics/GeneralSpecificationsWidget',
+        Data         => {
+            %Frontend,
+            %{$Stat},
+        },
+    );
+    return $Output;
+}
+
 1;

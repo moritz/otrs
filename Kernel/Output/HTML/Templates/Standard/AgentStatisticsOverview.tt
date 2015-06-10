@@ -43,7 +43,7 @@
                         <tr>
                             <th class="[% Data.CSSSortID | html %]">
                                 <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=Overview;Direction=[% Data.LinkSortID | uri %];OrderBy=ID;StartHit=[% Data.StartHit | uri %]">
-                                    [% Translate(Config("Stats::StatsHook")) | html %]
+                                    [% Config("Stats::StatsHook") | html %]
                                 </a>
                             </th>
                             <th class="[% Data.CSSSortTitle | html %]">
@@ -72,9 +72,9 @@
                     <tbody>
 [% RenderBlockStart("Result") %]
                         <tr>
-                            <td title="[% Translate('Run statistic "%s"', Data.Title) | html %]">
+                            <td>
                                 [% IF Data.AccessRw %]
-                                <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=View;StatID=[% Data.StatID | uri %]" class="AsBlock">
+                                <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=Edit;StatID=[% Data.StatID | uri %]" class="AsBlock" title="[% Translate('Edit statistic "%s".', Data.Title) | html %]">
                                     [% Data.StatNumber | html %]
 
                                 </a>

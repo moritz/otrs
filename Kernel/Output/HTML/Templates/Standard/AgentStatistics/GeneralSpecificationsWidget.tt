@@ -1,0 +1,165 @@
+# --
+# Copyright (C) 2001-2015 OTRS AG, http://otrs.com/
+# --
+# This software comes with ABSOLUTELY NO WARRANTY. For details, see
+# the enclosed file COPYING for license information (AGPL). If you
+# did not receive this file, see http://www.gnu.org/licenses/agpl.txt.
+# --
+
+<div class="WidgetSimple">
+    <div class="Header">
+        <h2>[% Translate("General Specification") | html %]</h2>
+    </div>
+    <div class="Content">
+
+        <fieldset class="TableLike">
+
+            <label class="Mandatory" for="Title">
+                <span class="Marker">*</span>
+                [% Translate("Title") | html %]:
+            </label>
+            <div class="Value">
+                <input type="text" name="Title" id="Title" class="W90pc Validate_Required" value="[% Data.Title | html %]"/>
+                <div id="TitleError" class="TooltipErrorMessage">
+                    <p>[% Translate("This field is required.") | html %]</p>
+                </div>
+            </div>
+            <div class="Clear"></div>
+
+            <label class="Mandatory" for="Description">
+                <span class="Marker">*</span>
+                [% Translate("Description") | html %]:
+            </label>
+            <div class="Value">
+                <textarea name="Description" id="Description" rows="4" cols="60" class="W90pc Validate_Required">[% Data.Description | html %]</textarea>
+                <div id="DescriptionError" class="TooltipErrorMessage">
+                    <p>[% Translate("This field is required.") | html %]</p>
+                </div>
+            </div>
+            <div class="Clear"></div>
+
+            <label class="Mandatory" for="Description">
+                <span class="Marker">*</span>
+                [% Translate("Object type") | html %]:
+            </label>
+            <div class="Value">
+                <span id="ObjectType">...</span>
+            </div>
+            <div class="Clear"></div>
+
+            <label class="Mandatory" for="Permission">
+                <span class="Marker">*</span>
+                [% Translate("Permissions") | html %]:
+            </label>
+            <div class="Value">
+                [% Data.SelectPermission %]
+                <p class="FieldExplanation">
+                    [% Translate("You can select one or more groups to define access for different agents.") | html %]
+                </p>
+                <div id="ValueError" class="TooltipErrorMessage">
+                    <p>[% Translate("This field is required.") | html %]</p>
+                </div>
+            </div>
+            <div class="Clear"></div>
+
+            <label class="Mandatory" for="Format">
+                <span class="Marker">*</span>
+                [% Translate("Result format") | html %]:
+            </label>
+            <div class="Value">
+                [% Data.SelectFormat %]
+[% RenderBlockStart("PackageUnavailableMsg") %]
+                <p class="FieldExplanation">
+                    [% Translate("Some result formats are disabled because at least one needed package is not installed.") | html %]
+                    [% Translate("Please contact your administrator.") | html %]
+                </p>
+[% RenderBlockEnd("PackageUnavailableMsg") %]
+                <div id="FormatError" class="TooltipErrorMessage">
+                    <p>[% Translate("This field is required.") | html %]</p>
+                </div>
+[% WRAPPER JSOnDocumentComplete %]
+<script type="text/javascript">//<![CDATA[
+$('#Format').bind('change', function (Event) {
+Core.Agent.Stats.FormatGraphSizeRelation();
+});
+//]]></script>
+[% END %]
+            </div>
+            <div class="Clear"></div>
+
+            <label for="GraphSize">
+                [% Translate("Graph size") | html %]:
+            </label>
+            <div class="Value">
+                [% Data.SelectGraphSize %]
+                <p class="FieldExplanation">
+                    [% Translate("If you use a graph as output format you have to select at least one graph size.") | html %]
+                </p>
+            </div>
+            <div class="Clear"></div>
+
+            <label for="SumRow">
+                [% Translate("Sum rows") | html %]:
+            </label>
+            <div class="Value">
+                [% Data.SelectSumRow %]
+            </div>
+            <div class="Clear"></div>
+
+            <label for="SumCol">
+                [% Translate("Sum columns") | html %]:
+            </label>
+            <div class="Value">
+                [% Data.SelectSumCol %]
+            </div>
+            <div class="Clear"></div>
+
+            <label for="Cache">
+                [% Translate("Use cache") | html %]:
+            </label>
+            <div class="Value">
+                [% Data.SelectCache %]
+                <p class="FieldExplanation">
+                    [% Translate("Most of the stats can be cached. This will speed up the presentation of this stat.") | html %]
+                </p>
+            </div>
+            <div class="Clear"></div>
+
+            <label for="ShowAsDashboardWidget">
+                [% Translate("Show as dashboard widget") | html %]:
+            </label>
+            <div class="Value">
+                [% Data.SelectShowAsDashboardWidget %]
+                <p class="FieldExplanation">
+                    [% Translate("Provide the statistic as a widget that agents can activate in their dashboard.") | html %]
+                    <br/>
+                    [% Translate("Please note") | html %]:<br />
+                    - [% Translate("Enabling the dashboard widget will activate caching for this statistic in the dashboard.") | html %]<br />
+                    - [% Translate("Agents will not be able to change absolute time settings for statistics dashboard widgets.") | html %]
+                </p>
+            </div>
+            <div class="Clear"></div>
+
+            <label for="Valid">
+                [% Translate("Validity") | html %]:
+            </label>
+            <div class="Value">
+                [% Data.SelectValid %]
+                <p class="FieldExplanation">
+                    [% Translate("If set to invalid end users can not generate the stat.") | html %]
+                </p>
+            </div>
+            <div class="Clear"></div>
+
+            <div class="Field SpacingTop">
+                <button class="Primary CallForAction" type="submit" value="[% Translate("Save") | html %]">
+                    <span>[% Translate("Save") | html %]</span>
+                </button>
+                [% Translate('or') | html %]
+                <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=Overview">
+                    [% Translate('cancel') | html %]
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
