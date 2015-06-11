@@ -38,7 +38,8 @@
     transition: all ease-in 0.2s;
 }
 
-.BigButtons li a:hover {
+.BigButtons li a:hover,
+.BigButtons li a.Active {
 	background-color: #e5e5e5;
     border-color: #999;
 }

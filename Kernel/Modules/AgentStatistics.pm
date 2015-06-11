@@ -81,6 +81,9 @@ sub Run {
     elsif ( $Self->{Subaction} eq 'View' ) {
         return $Self->ViewScreen();
     }
+    elsif ( $Self->{Subaction} eq 'GeneralSpecificationsWidgetAJAX' ) {
+        return $Self->GeneralSpecificationsWidgetAJAX();
+    }
 
     # No (known) subaction?
     return $Kernel::OM->Get('Kernel::Output::HTML::Layout')->ErrorScreen( Message => 'Invalid Subaction.' );
@@ -181,25 +184,6 @@ sub OverviewScreen {
             AccessRw => $Self->{AccessRw},
         },
         TemplateFile => 'AgentStatisticsOverview',
-    );
-    $Output .= $LayoutObject->Footer();
-    return $Output;
-}
-
-sub AddScreen {
-    my ( $Self, %Param ) = @_;
-
-    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
-
-    if ( !$Self->{AccessRw} ) {
-        return $LayoutObject->NoPermission( WithHeader => 'yes' );
-    }
-
-    # build output
-    my $Output = $LayoutObject->Header( Title => 'Add New Statistic' );
-    $Output .= $LayoutObject->NavigationBar();
-    $Output .= $LayoutObject->Output(
-        TemplateFile => 'AgentStatisticsAdd',
     );
     $Output .= $LayoutObject->Footer();
     return $Output;
@@ -393,6 +377,46 @@ sub ViewScreen {
     $Output .= $LayoutObject->Footer();
     return $Output;
 }
+
+sub AddScreen {
+    my ( $Self, %Param ) = @_;
+
+    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+
+    if ( !$Self->{AccessRw} ) {
+        return $LayoutObject->NoPermission( WithHeader => 'yes' );
+    }
+
+    my %Frontend;
+    $Frontend{GeneralSpecificationsWidget} = $Self->_GeneralSpecificationsWidget();
+
+    # build output
+    my $Output = $LayoutObject->Header( Title => 'Add New Statistic' );
+    $Output .= $LayoutObject->NavigationBar();
+    $Output .= $LayoutObject->Output(
+        TemplateFile => 'AgentStatisticsAdd',
+        Data         => {
+            %Frontend,
+        },
+    );
+    $Output .= $LayoutObject->Footer();
+    return $Output;
+}
+
+
+sub GeneralSpecificationsWidgetAJAX {
+
+    my ( $Self, %Param ) = @_;
+
+    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+    return $LayoutObject->Attachment(
+        ContentType => 'text/html',
+        Content     => $Self->_GeneralSpecificationsWidget(),
+        Type        => 'inline',
+        NoCache     => 1,
+    );
+}
+
 
 sub _GeneralSpecificationsWidget {
     my ( $Self, %Param ) = @_;

@@ -32,7 +32,14 @@
             <input type="hidden" name="Home"      value="EditSpecification"/>
             <input type="hidden" name="StatID"    value="[% Data.StatID | html %]"/>
 
-            [% Data.GeneralSpecificationsWidget %]
+            <div class="WidgetSimple">
+                <div class="Header">
+                    <h2>[% Translate("General Specification") | html %]</h2>
+                </div>
+                <div class="Content">
+                    [% Data.GeneralSpecificationsWidget %]
+                </div>
+            </div>
 
             <div class="WidgetSimple">
                 <div class="Header">

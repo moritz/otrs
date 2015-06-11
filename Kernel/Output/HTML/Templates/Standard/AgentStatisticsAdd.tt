@@ -55,5 +55,39 @@
                 </ul>
             </div>
         </div>
+
+        <div class="WidgetSimple" id="GeneralSpecifications" style="display: none;">
+            <div class="Header">
+                <h2>[% Translate("General Specification") | html %]</h2>
+            </div>
+            <div class="Content Center"></div>
+        </div>
     </div>
 </div>
+
+[% WRAPPER JSOnDocumentComplete %]
+<script type="text/javascript">//<![CDATA[
+$('.BigButtons li a').bind('click', function (Event) {
+
+    $('.BigButtons li a').removeClass('Active');
+    $(this).addClass('Active');
+
+    $('#GeneralSpecifications').fadeIn(function() {
+
+        $('#GeneralSpecifications .Content').addClass('Center').html('<span class="AJAXLoader"></span>');
+
+        var URL = Core.Config.Get('Baselink'),
+        Data = {
+            Action: 'AgentStatistics',
+            Subaction: 'GeneralSpecificationsWidgetAJAX'
+        };
+
+        Core.AJAX.FunctionCall(URL, Data, function(Response) {
+            $('#GeneralSpecifications .Content').removeClass('Center').html(Response);
+        }, 'html');
+    });
+
+    return false;
+});
+//]]></script>
+[% END %]
