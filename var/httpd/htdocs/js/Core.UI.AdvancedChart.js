@@ -81,7 +81,7 @@ Core.UI.AdvancedChart = (function (TargetNS) {
         RawData.shift();
         Headings = RawData.shift();
 
-        if (typeof PreferencesData.Line !== 'undefined') {
+        if (PreferencesData && typeof PreferencesData.Line !== 'undefined') {
             PreferencesData = PreferencesData.Line;
         }
         else {

@@ -64,4 +64,60 @@
 	margin-bottom: 5px;
 }
 
+.PreviewContainer {
+	position: relative;
+}
+
+.PreviewContainer .Preview {
+	width: 70%;
+	background: #eee;
+	height: 300px;
+	margin: 20px auto;
+	border: 1px solid #ddd;
+}
+
+.PreviewContainer .CallForAction.Left,
+.PreviewContainer .CallForAction.Right {
+	position: absolute;
+	top: 50%;
+	margin-top: -30px;
+	width: 100px;
+	left: 50px;
+	text-align: center;
+}
+
+.PreviewContainer .CallForAction.Right {
+	left: auto;
+	right: 50px;
+}
+
+.PreviewContainer .CallForAction.Bottom {
+	display: block;
+	margin: 0px auto 20px auto;
+}
+
+.PreviewContainer #PreviewCanvas {
+	width: 100%;
+	margin: 15px 0px;
+	height: 300px;
+}
+
+.PreviewContainer .PreviewTable {
+	overflow: auto;
+	height: 300px;
+}
+
+.PreviewContainer .SwitchView {
+    color: #aaa;
+    font-size: 25px;
+    position: absolute;
+    right: 11.5%;
+    top: 27px;
+    cursor: pointer;
+}
+
+.PreviewContainer .SwitchView:hover {
+	color: #333;
+}
+
 } /* end @media */
