@@ -81,6 +81,9 @@ sub Run {
     elsif ( $Self->{Subaction} eq 'View' ) {
         return $Self->ViewScreen();
     }
+    elsif ( $Self->{Subaction} eq 'Run' ) {
+        return $Self->RunAction();
+    }
     elsif ( $Self->{Subaction} eq 'GeneralSpecificationsWidgetAJAX' ) {
         return $Self->GeneralSpecificationsWidgetAJAX();
     }
@@ -355,8 +358,15 @@ sub ViewScreen {
 
     # Get all statistics that the current user may see (does permission check).
     my $StatsList = $Self->{StatsObject}->StatsListGet();
+    if ( !IsHashRefWithData( $StatsList->{$StatID} ) ) {
+        return $LayoutObject->ErrorScreen(
+            Message => 'Could not load stat.',
+        );
+    }
 
-    my $Stat = $StatsList->{$StatID};
+    my $Stat = $Self->{StatsObject}->StatsGet(
+        StatID => $StatID,
+    );
 
     # get param
     if ( !IsHashRefWithData($Stat) ) {
@@ -365,13 +375,26 @@ sub ViewScreen {
         );
     }
 
+    my %Frontend;
+
+    $Kernel::OM->ObjectParamAdd(
+        'Kernel::Output::HTML::Statistics::View' => {
+            StatsObject => $Self->{StatsObject},
+        },
+    );
+    $Frontend{StatsViewParameterWidget}
+        = $Kernel::OM->Get('Kernel::Output::HTML::Statistics::View')->StatsViewParameterWidget(
+        Stat => $Stat,
+        );
+
     my $Output = $LayoutObject->Header( Title => 'View' );
     $Output .= $LayoutObject->NavigationBar();
     $Output .= $LayoutObject->Output(
         TemplateFile => 'AgentStatisticsView',
         Data         => {
-            #%Frontend,
-            #%{$Stat},
+            AccessRw => $Self->{AccessRw},
+            %Frontend,
+            %{$Stat},
         },
     );
     $Output .= $LayoutObject->Footer();
@@ -403,6 +426,607 @@ sub AddScreen {
     return $Output;
 }
 
+sub RunAction {
+    my ( $Self, %Param ) = @_;
+
+    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+    my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
+    my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
+
+    # permission check
+    $Self->{AccessRo} || return $LayoutObject->NoPermission( WithHeader => 'yes' );
+
+    # get params
+    for (qw(Format GraphSize StatID ExchangeAxis Name Cached)) {
+        $Param{$_} = $ParamObject->GetParam( Param => $_ );
+    }
+    my @RequiredParams = (qw(Format StatID));
+    if ( $Param{Cached} ) {
+        push @RequiredParams, 'Name';
+    }
+    for my $Required (@RequiredParams) {
+        if ( !$Param{$Required} ) {
+            return $LayoutObject->ErrorScreen( Message => "Run: Get no $Required!" );
+        }
+    }
+
+    if ( $Param{Format} =~ m{^GD::Graph\.*}x ) {
+
+        # check installed packages
+        for my $Module ( 'GD', 'GD::Graph' ) {
+            if ( !$$Kernel::OM->Get('Kernel::System::Main')->Require($Module) ) {
+                return $LayoutObject->ErrorScreen(
+                    Message => "Run: Please install $Module module!"
+                );
+            }
+        }
+        if ( !$Param{GraphSize} ) {
+            return $LayoutObject->ErrorScreen( Message => 'Run: Need GraphSize!' );
+        }
+    }
+
+    my $Stat = $Self->{StatsObject}->StatsGet( StatID => $Param{StatID} );
+
+    # permission check
+    if ( !$Self->{AccessRw} ) {
+        my $UserPermission = 0;
+
+        return $LayoutObject->NoPermission( WithHeader => 'yes' ) if !$Stat->{Valid};
+
+        # get user groups
+        my %GroupList = $Kernel::OM->Get('Kernel::System::Group')->PermissionUserGet(
+            UserID => $Self->{UserID},
+            Type   => 'ro',
+        );
+
+        GROUPID:
+        for my $GroupID ( @{ $Stat->{Permission} } ) {
+
+            next GROUPID if !$GroupID;
+            next GROUPID if !$GroupList{$GroupID};
+
+            $UserPermission = 1;
+
+            last GROUPID;
+        }
+
+        return $LayoutObject->NoPermission( WithHeader => 'yes' ) if !$UserPermission;
+    }
+
+    # get params
+    my %GetParam;
+
+    # not sure, if this is the right way
+    if ( $Stat->{StatType} eq 'static' ) {
+        my $Params = $Self->{StatsObject}->GetParams( StatID => $Param{StatID} );
+        PARAMITEM:
+        for my $ParamItem ( @{$Params} ) {
+
+            # param is array
+            if ( $ParamItem->{Multiple} ) {
+                my @Array = $ParamObject->GetArray( Param => $ParamItem->{Name} );
+                $GetParam{ $ParamItem->{Name} } = \@Array;
+                next PARAMITEM;
+            }
+
+            # param is string
+            $GetParam{ $ParamItem->{Name} } = $ParamObject->GetParam( Param => $ParamItem->{Name} );
+        }
+    }
+    else {
+        my $TimePeriod = 0;
+
+        for my $Use (qw(UseAsRestriction UseAsXvalue UseAsValueSeries)) {
+            $Stat->{$Use} ||= [];
+
+            my @Array   = @{ $Stat->{$Use} };
+            my $Counter = 0;
+            ELEMENT:
+            for my $Element (@Array) {
+                next ELEMENT if !$Element->{Selected};
+
+                if ( !$Element->{Fixed} ) {
+                    if ( $ParamObject->GetArray( Param => $Use . $Element->{Element} ) )
+                    {
+                        my @SelectedValues = $ParamObject->GetArray(
+                            Param => $Use . $Element->{Element}
+                        );
+
+                        $Element->{SelectedValues} = \@SelectedValues;
+                    }
+                    if ( $Element->{Block} eq 'Time' ) {
+
+                        # get time object
+                        my $TimeObject = $Kernel::OM->Get('Kernel::System::Time');
+
+                        if (
+                            $ParamObject->GetParam(
+                                Param => $Use . $Element->{Element} . 'StartYear'
+                            )
+                            )
+                        {
+                            my %Time;
+                            for my $Limit (qw(Start Stop)) {
+                                for my $Unit (qw(Year Month Day Hour Minute Second)) {
+                                    if (
+                                        defined(
+                                            $ParamObject->GetParam(
+                                                Param => $Use
+                                                    . $Element->{Element}
+                                                    . "$Limit$Unit"
+                                                )
+                                        )
+                                        )
+                                    {
+                                        $Time{ $Limit . $Unit } = $ParamObject->GetParam(
+                                            Param => $Use . $Element->{Element} . "$Limit$Unit",
+                                        );
+                                    }
+                                }
+                                if ( !defined( $Time{ $Limit . 'Hour' } ) ) {
+                                    if ( $Limit eq 'Start' ) {
+                                        $Time{StartHour}   = 0;
+                                        $Time{StartMinute} = 0;
+                                        $Time{StartSecond} = 0;
+                                    }
+                                    elsif ( $Limit eq 'Stop' ) {
+                                        $Time{StopHour}   = 23;
+                                        $Time{StopMinute} = 59;
+                                        $Time{StopSecond} = 59;
+                                    }
+                                }
+                                elsif ( !defined( $Time{ $Limit . 'Second' } ) ) {
+                                    if ( $Limit eq 'Start' ) {
+                                        $Time{StartSecond} = 0;
+                                    }
+                                    elsif ( $Limit eq 'Stop' ) {
+                                        $Time{StopSecond} = 59;
+                                    }
+                                }
+                                $Time{"Time$Limit"} = sprintf(
+                                    "%04d-%02d-%02d %02d:%02d:%02d",
+                                    $Time{ $Limit . 'Year' },
+                                    $Time{ $Limit . 'Month' },
+                                    $Time{ $Limit . 'Day' },
+                                    $Time{ $Limit . 'Hour' },
+                                    $Time{ $Limit . 'Minute' },
+                                    $Time{ $Limit . 'Second' },
+                                );
+                            }
+
+                            # integrate this functionality in the completenesscheck
+                            if (
+                                $TimeObject->TimeStamp2SystemTime(
+                                    String => $Time{TimeStart}
+                                )
+                                < $TimeObject->TimeStamp2SystemTime(
+                                    String => $Element->{TimeStart}
+                                )
+                                )
+                            {
+
+                                # redirect to edit
+                                return $LayoutObject->Redirect(
+                                    OP =>
+                                        "Action=AgentStatistics;Subaction=View;StatID=$Param{StatID};Message=1",
+                                );
+                            }
+
+                            # integrate this functionality in the completenesscheck
+                            if (
+                                $TimeObject->TimeStamp2SystemTime(
+                                    String => $Time{TimeStop}
+                                )
+                                > $TimeObject->TimeStamp2SystemTime(
+                                    String => $Element->{TimeStop}
+                                )
+                                )
+                            {
+                                return $LayoutObject->Redirect(
+                                    OP =>
+                                        "Action=AgentStatistics;Subaction=View;StatID=$Param{StatID};Message=2",
+                                );
+                            }
+                            $Element->{TimeStart} = $Time{TimeStart};
+                            $Element->{TimeStop}  = $Time{TimeStop};
+                            $TimePeriod           = (
+                                $TimeObject->TimeStamp2SystemTime(
+                                    String => $Element->{TimeStop}
+                                    )
+                                )
+                                - (
+                                $TimeObject->TimeStamp2SystemTime(
+                                    String => $Element->{TimeStart}
+                                    )
+                                );
+                        }
+                        else {
+                            my %Time;
+                            my ( $s, $m, $h, $D, $M, $Y ) = $TimeObject->SystemTime2Date(
+                                SystemTime => $TimeObject->SystemTime(),
+                            );
+                            $Time{TimeRelativeUnit} = $ParamObject->GetParam(
+                                Param => $Use . $Element->{Element} . 'TimeRelativeUnit'
+                            );
+                            if (
+                                $ParamObject->GetParam(
+                                    Param => $Use . $Element->{Element} . 'TimeRelativeCount'
+                                )
+                                )
+                            {
+                                $Time{TimeRelativeCount} = $ParamObject->GetParam(
+                                    Param => $Use . $Element->{Element} . 'TimeRelativeCount'
+                                );
+                            }
+
+                            my $TimePeriodAdmin = $Element->{TimeRelativeCount}
+                                * $Self->_TimeInSeconds(
+                                TimeUnit => $Element->{TimeRelativeUnit}
+                                );
+                            my $TimePeriodAgent = $Time{TimeRelativeCount}
+                                * $Self->_TimeInSeconds( TimeUnit => $Time{TimeRelativeUnit} );
+
+                            # integrate this functionality in the completenesscheck
+                            if ( $TimePeriodAgent > $TimePeriodAdmin ) {
+                                return $LayoutObject->Redirect(
+                                    OP =>
+                                        "Action=AgentStatistics;Subaction=View;StatID=$Param{StatID};Message=3",
+                                );
+                            }
+
+                            $TimePeriod                   = $TimePeriodAgent;
+                            $Element->{TimeRelativeCount} = $Time{TimeRelativeCount};
+                            $Element->{TimeRelativeUnit}  = $Time{TimeRelativeUnit};
+                        }
+                        if (
+                            $ParamObject->GetParam(
+                                Param => $Use . $Element->{Element} . 'TimeScaleCount'
+                            )
+                            )
+                        {
+                            $Element->{TimeScaleCount} = $ParamObject->GetParam(
+                                Param => $Use . $Element->{Element} . 'TimeScaleCount'
+                            );
+                        }
+                        else {
+                            $Element->{TimeScaleCount} = 1;
+                        }
+                    }
+                }
+
+                $GetParam{$Use}[$Counter] = $Element;
+                $Counter++;
+
+            }
+            if ( ref $GetParam{$Use} ne 'ARRAY' ) {
+                $GetParam{$Use} = [];
+            }
+        }
+
+        # check if the timeperiod is too big or the time scale too small
+        if (
+            $GetParam{UseAsXvalue}[0]{Block} eq 'Time'
+            && (
+                !$GetParam{UseAsValueSeries}[0]
+                || (
+                    $GetParam{UseAsValueSeries}[0]
+                    && $GetParam{UseAsValueSeries}[0]{Block} ne 'Time'
+                )
+            )
+            )
+        {
+
+            my $ScalePeriod = $Self->_TimeInSeconds(
+                TimeUnit => $GetParam{UseAsXvalue}[0]{SelectedValues}[0]
+            );
+
+            # integrate this functionality in the completenesscheck
+            if (
+                $TimePeriod / ( $ScalePeriod * $GetParam{UseAsXvalue}[0]{TimeScaleCount} )
+                > ( $ConfigObject->Get('Stats::MaxXaxisAttributes') || 1000 )
+                )
+            {
+                return $LayoutObject->Redirect(
+                    OP => "Action=AgentStatistics;Subaction=View;StatID=$Param{StatID};Message=4",
+                );
+            }
+        }
+    }
+
+    # run stat...
+    my @StatArray;
+
+    # called from within the dashboard. will use the same mechanism and configuration like in
+    # the dashboard stats - the (cached) result will be the same as seen in the dashboard
+    if ( $Param{Cached} ) {
+
+        # get settings for specified stats by using the dashboard configuration for the agent
+        my %Preferences = $$Kernel::OM->Get('Kernel::System::User')->GetPreferences(
+            UserID => $Self->{UserID},
+        );
+        my $PrefKeyStatsConfiguration = 'UserDashboardStatsStatsConfiguration' . $Param{Name};
+        my $StatsSettings             = {};
+        if ( $Preferences{$PrefKeyStatsConfiguration} ) {
+            $StatsSettings = $Kernel::OM->Get('Kernel::System::JSON')->Decode(
+                Data => $Preferences{$PrefKeyStatsConfiguration},
+            );
+        }
+        @StatArray = @{
+            $Self->{StatsObject}->StatsResultCacheGet(
+                StatID       => $Param{StatID},
+                UserGetParam => $StatsSettings,
+            );
+            }
+    }
+
+    # called normally within the stats area - generate stats now and use provided configuraton
+    else {
+        @StatArray = @{
+            $Self->{StatsObject}->StatsRun(
+                StatID   => $Param{StatID},
+                GetParam => \%GetParam,
+            );
+        };
+    }
+
+    # exchange axis if selected
+    if ( $Param{ExchangeAxis} ) {
+        my @NewStatArray;
+        my $Title = $StatArray[0][0];
+
+        shift(@StatArray);
+        for my $Key1 ( 0 .. $#StatArray ) {
+            for my $Key2 ( 0 .. $#{ $StatArray[0] } ) {
+                $NewStatArray[$Key2][$Key1] = $StatArray[$Key1][$Key2];
+            }
+        }
+        $NewStatArray[0][0] = '';
+        unshift( @NewStatArray, [$Title] );
+        @StatArray = @NewStatArray;
+    }
+
+    # presentation
+    my $TitleArrayRef = shift @StatArray;
+    my $Title         = $TitleArrayRef->[0];
+    my $HeadArrayRef  = shift @StatArray;
+
+    # if array = empty
+    if ( !@StatArray ) {
+        push @StatArray, [ ' ', 0 ];
+    }
+
+    # Generate Filename
+    my $Filename = $Self->{StatsObject}->StringAndTimestamp2Filename(
+        String => $Stat->{Title} . ' Created',
+    );
+
+    # Translate the column and row description
+    $Self->_ColumnAndRowTranslation(
+        StatArrayRef => \@StatArray,
+        HeadArrayRef => $HeadArrayRef,
+        StatRef      => $Stat,
+        ExchangeAxis => $Param{ExchangeAxis},
+    );
+    my $Output;
+
+    # get CSV object
+    my $CSVObject = $Kernel::OM->Get('Kernel::System::CSV');
+
+    # generate csv output
+    if ( $Param{Format} eq 'CSV' ) {
+
+        # get Separator from language file
+        my $UserCSVSeparator = $LayoutObject->{LanguageObject}->{Separator};
+
+        if ( $ConfigObject->Get('PreferencesGroups')->{CSVSeparator}->{Active} ) {
+            my %UserData = $$Kernel::OM->Get('Kernel::System::User')->GetUserData( UserID => $Self->{UserID} );
+            $UserCSVSeparator = $UserData{UserCSVSeparator} if $UserData{UserCSVSeparator};
+        }
+        $Output .= $CSVObject->Array2CSV(
+            Head      => $HeadArrayRef,
+            Data      => \@StatArray,
+            Separator => $UserCSVSeparator,
+        );
+
+        return $LayoutObject->Attachment(
+            Filename    => $Filename . '.csv',
+            ContentType => "text/csv",
+            Content     => $Output,
+        );
+    }
+
+    # generate excel output
+    elsif ( $Param{Format} eq 'Excel' ) {
+        $Output .= $CSVObject->Array2CSV(
+            Head   => $HeadArrayRef,
+            Data   => \@StatArray,
+            Format => 'Excel',
+        );
+
+        return $LayoutObject->Attachment(
+            Filename    => $Filename . '.xlsx',
+            ContentType => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            Content     => $Output,
+        );
+
+    }
+
+    # pdf or html output
+    elsif ( $Param{Format} eq 'Print' ) {
+        $Kernel::OM->Get('Kernel::System::Main')->Require('Kernel::System::PDF');
+
+        # get PDF object
+        my $PDFObject;
+
+        if ( $ConfigObject->Get('PDF') ) {
+            $PDFObject = $Kernel::OM->Get('Kernel::System::PDF');
+        }
+
+        # PDF Output
+        if ($PDFObject) {
+            my $PrintedBy = $LayoutObject->{LanguageObject}->Translate('printed by');
+            my $Page      = $LayoutObject->{LanguageObject}->Translate('Page');
+            my $Time      = $LayoutObject->{Time};
+            my $Url       = ' ';
+            if ( $ENV{REQUEST_URI} ) {
+                $Url = $ConfigObject->Get('HttpType') . '://'
+                    . $ConfigObject->Get('FQDN')
+                    . $ENV{REQUEST_URI};
+            }
+
+            # get maximum number of pages
+            my $MaxPages = $ConfigObject->Get('PDF::MaxPages');
+            if ( !$MaxPages || $MaxPages < 1 || $MaxPages > 1000 ) {
+                $MaxPages = 100;
+            }
+
+            # create the header
+            my $CellData;
+            my $CounterRow  = 0;
+            my $CounterHead = 0;
+            for my $Content ( @{$HeadArrayRef} ) {
+                $CellData->[$CounterRow]->[$CounterHead]->{Content} = $Content;
+                $CellData->[$CounterRow]->[$CounterHead]->{Font}    = 'ProportionalBold';
+                $CounterHead++;
+            }
+            if ( $CounterHead > 0 ) {
+                $CounterRow++;
+            }
+
+            # create the content array
+            for my $Row (@StatArray) {
+                my $CounterColumn = 0;
+                for my $Content ( @{$Row} ) {
+                    $CellData->[$CounterRow]->[$CounterColumn]->{Content} = $Content;
+                    $CounterColumn++;
+                }
+                $CounterRow++;
+            }
+
+            # output 'No matches found', if no content was given
+            if ( !$CellData->[0]->[0] ) {
+                $CellData->[0]->[0]->{Content} = $LayoutObject->{LanguageObject}->Translate('No matches found.');
+            }
+
+            # page params
+            my %User = $Kernel::OM->Get('Kernel::System::User')->GetUserData( UserID => $Self->{UserID} );
+            my %PageParam;
+            $PageParam{PageOrientation} = 'landscape';
+            $PageParam{MarginTop}       = 30;
+            $PageParam{MarginRight}     = 40;
+            $PageParam{MarginBottom}    = 40;
+            $PageParam{MarginLeft}      = 40;
+            $PageParam{HeaderRight}     = $ConfigObject->Get('Stats::StatsHook') . $Stat->{StatNumber};
+            $PageParam{FooterLeft}      = $Url;
+            $PageParam{HeadlineLeft}    = $Title;
+            $PageParam{HeadlineRight}   = $PrintedBy . ' '
+                . $User{UserFirstname} . ' '
+                . $User{UserLastname} . ' ('
+                . $User{UserEmail} . ') '
+                . $Time;
+
+            # table params
+            my %TableParam;
+            $TableParam{CellData}            = $CellData;
+            $TableParam{Type}                = 'Cut';
+            $TableParam{FontSize}            = 6;
+            $TableParam{Border}              = 0;
+            $TableParam{BackgroundColorEven} = '#AAAAAA';
+            $TableParam{BackgroundColorOdd}  = '#DDDDDD';
+            $TableParam{Padding}             = 1;
+            $TableParam{PaddingTop}          = 3;
+            $TableParam{PaddingBottom}       = 3;
+
+            # create new pdf document
+            $PDFObject->DocumentNew(
+                Title  => $ConfigObject->Get('Product') . ': ' . $Title,
+                Encode => $LayoutObject->{UserCharset},
+            );
+
+            # start table output
+            $PDFObject->PageNew(
+                %PageParam,
+                FooterRight => $Page . ' 1',
+            );
+            COUNT:
+            for ( 2 .. $MaxPages ) {
+
+                # output table (or a fragment of it)
+                %TableParam = $PDFObject->Table( %TableParam, );
+
+                # stop output or output next page
+                last COUNT if $TableParam{State};
+
+                $PDFObject->PageNew(
+                    %PageParam,
+                    FooterRight => $Page . ' ' . $_,
+                );
+            }
+
+            # return the pdf document
+            my $PDFString = $PDFObject->DocumentOutput();
+            return $LayoutObject->Attachment(
+                Filename    => $Filename . '.pdf',
+                ContentType => 'application/pdf',
+                Content     => $PDFString,
+                Type        => 'inline',
+            );
+        }
+
+        # HTML Output
+        else {
+            $Stat->{Table} = $Self->_OutputHTMLTable(
+                Head => $HeadArrayRef,
+                Data => \@StatArray,
+            );
+
+            $Stat->{Title} = $Title;
+
+            # presentation
+            my $Output = $LayoutObject->PrintHeader( Value => $Title );
+            $Output .= $LayoutObject->Output(
+                Data         => $Stat,
+                TemplateFile => 'AgentStatisticsPrint',
+            );
+            $Output .= $LayoutObject->PrintFooter();
+            return $Output;
+        }
+    }
+
+    # graph
+    elsif ( $Param{Format} =~ m{^GD::Graph\.*}x ) {
+
+        # make graph
+        my $Ext   = 'png';
+        my $Graph = $Self->{StatsObject}->GenerateGraph(
+            Array        => \@StatArray,
+            HeadArrayRef => $HeadArrayRef,
+            Title        => $Title,
+            Format       => $Param{Format},
+            GraphSize    => $Param{GraphSize},
+        );
+
+        # error messages if there is no graph
+        if ( !$Graph ) {
+            if ( $Param{Format} =~ m{^GD::Graph::pie}x ) {
+                return $LayoutObject->ErrorScreen(
+                    Message => 'You use invalid data! Perhaps there are no results.',
+                );
+            }
+            return $LayoutObject->ErrorScreen(
+                Message => "Too much data, can't use it with graph!",
+            );
+        }
+
+        # return image to browser
+        return $LayoutObject->Attachment(
+            Filename    => $Filename . '.' . $Ext,
+            ContentType => "image/$Ext",
+            Content     => $Graph,
+            Type        => 'attachment',             # not inline because of bug# 2757
+        );
+    }
+}
 
 sub GeneralSpecificationsWidgetAJAX {
 
@@ -416,7 +1040,6 @@ sub GeneralSpecificationsWidgetAJAX {
         NoCache     => 1,
     );
 }
-
 
 sub _GeneralSpecificationsWidget {
     my ( $Self, %Param ) = @_;
@@ -537,6 +1160,203 @@ sub _GeneralSpecificationsWidget {
         },
     );
     return $Output;
+}
+
+=item _ColumnAndRowTranslation()
+
+translate the column and row name if needed
+
+    $StatsObject->_ColumnAndRowTranslation(
+        StatArrayRef => $StatArrayRef,
+        HeadArrayRef => $HeadArrayRef,
+        StatRef      => $StatRef,
+        ExchangeAxis => 1 | 0,
+    );
+
+=cut
+
+sub _ColumnAndRowTranslation {
+    my ( $Self, %Param ) = @_;
+
+    # check if need params are available
+    for my $NeededParam (qw(StatArrayRef HeadArrayRef StatRef)) {
+        if ( !$Param{$NeededParam} ) {
+            return $Kernel::OM->Get('Kernel::Output::HTML::Layout')->ErrorScreen(
+                Message => "_ColumnAndRowTranslation: Need $NeededParam!"
+            );
+        }
+    }
+
+    # get config object
+    my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
+
+    # create language object
+    $Kernel::OM->ObjectParamAdd(
+        'Kernel::Language' => {
+            UserLanguage => $Param{UserLanguage} || $ConfigObject->Get('DefaultLanguage') || 'en',
+            }
+    );
+    my $LanguageObject = $Kernel::OM->Get('Kernel::Language');
+
+    # find out, if the column or row names should be translated
+    my %Translation;
+    my %Sort;
+
+    for my $Use (qw( UseAsXvalue UseAsValueSeries )) {
+        if (
+            $Param{StatRef}->{StatType} eq 'dynamic'
+            && $Param{StatRef}->{$Use}
+            && ref( $Param{StatRef}->{$Use} ) eq 'ARRAY'
+            )
+        {
+            my @Array = @{ $Param{StatRef}->{$Use} };
+
+            ELEMENT:
+            for my $Element (@Array) {
+                next ELEMENT if !$Element->{SelectedValues};
+
+                if ( $Element->{Translation} && $Element->{Block} eq 'Time' ) {
+                    $Translation{$Use} = 'Time';
+                }
+                elsif ( $Element->{Translation} ) {
+                    $Translation{$Use} = 'Common';
+                }
+                else {
+                    $Translation{$Use} = '';
+                }
+
+                if (
+                    $Element->{Translation}
+                    && $Element->{Block} ne 'Time'
+                    && !$Element->{SortIndividual}
+                    )
+                {
+                    $Sort{$Use} = 1;
+                }
+                last ELEMENT;
+            }
+        }
+    }
+
+    # check if the axis are changed
+    if ( $Param{ExchangeAxis} ) {
+        my $UseAsXvalueOld = $Translation{UseAsXvalue};
+        $Translation{UseAsXvalue}      = $Translation{UseAsValueSeries};
+        $Translation{UseAsValueSeries} = $UseAsXvalueOld;
+
+        my $SortUseAsXvalueOld = $Sort{UseAsXvalue};
+        $Sort{UseAsXvalue}      = $Sort{UseAsValueSeries};
+        $Sort{UseAsValueSeries} = $SortUseAsXvalueOld;
+    }
+
+    # translate the headline
+    $Param{HeadArrayRef}->[0] = $LanguageObject->Translate( $Param{HeadArrayRef}->[0] );
+
+    if ( $Translation{UseAsXvalue} && $Translation{UseAsXvalue} eq 'Time' ) {
+        for my $Word ( @{ $Param{HeadArrayRef} } ) {
+            if ( $Word =~ m{ ^ (\w+?) ( \s \d+ ) $ }smx ) {
+                my $TranslatedWord = $LanguageObject->Translate($1);
+                $Word =~ s{ ^ ( \w+? ) ( \s \d+ ) $ }{$TranslatedWord$2}smx;
+            }
+        }
+    }
+
+    elsif ( $Translation{UseAsXvalue} ) {
+        for my $Word ( @{ $Param{HeadArrayRef} } ) {
+            $Word = $LanguageObject->Translate($Word);
+        }
+    }
+
+    # sort the headline
+    if ( $Sort{UseAsXvalue} ) {
+        my @HeadOld = @{ $Param{HeadArrayRef} };
+        shift @HeadOld;    # because the first value is no sortable column name
+
+        # special handling if the sumfunction is used
+        my $SumColRef;
+        if ( $Param{StatRef}->{SumRow} ) {
+            $SumColRef = pop @HeadOld;
+        }
+
+        # sort
+        my @SortedHead = sort { $a cmp $b } @HeadOld;
+
+        # special handling if the sumfunction is used
+        if ( $Param{StatRef}->{SumCol} ) {
+            push @SortedHead, $SumColRef;
+            push @HeadOld,    $SumColRef;
+        }
+
+        # add the row names to the new StatArray
+        my @StatArrayNew;
+        for my $Row ( @{ $Param{StatArrayRef} } ) {
+            push @StatArrayNew, [ $Row->[0] ];
+        }
+
+        # sort the values
+        for my $ColumnName (@SortedHead) {
+            my $Counter = 0;
+            COLUMNNAMEOLD:
+            for my $ColumnNameOld (@HeadOld) {
+                $Counter++;
+                next COLUMNNAMEOLD if $ColumnNameOld ne $ColumnName;
+
+                for my $RowLine ( 0 .. $#StatArrayNew ) {
+                    push @{ $StatArrayNew[$RowLine] }, $Param{StatArrayRef}->[$RowLine]->[$Counter];
+                }
+                last COLUMNNAMEOLD;
+            }
+        }
+
+        # bring the data back to the references
+        unshift @SortedHead, $Param{HeadArrayRef}->[0];
+        @{ $Param{HeadArrayRef} } = @SortedHead;
+        @{ $Param{StatArrayRef} } = @StatArrayNew;
+    }
+
+    # translate the row description
+    if ( $Translation{UseAsValueSeries} && $Translation{UseAsValueSeries} eq 'Time' ) {
+        for my $Word ( @{ $Param{StatArrayRef} } ) {
+            if ( $Word->[0] =~ m{ ^ (\w+?) ( \s \d+ ) $ }smx ) {
+                my $TranslatedWord = $LanguageObject->Translate($1);
+                $Word->[0] =~ s{ ^ ( \w+? ) ( \s \d+ ) $ }{$TranslatedWord$2}smx;
+            }
+        }
+    }
+    elsif ( $Translation{UseAsValueSeries} ) {
+
+        # translate
+        for my $Word ( @{ $Param{StatArrayRef} } ) {
+            $Word->[0] = $LanguageObject->Translate( $Word->[0] );
+        }
+    }
+
+    # sort the row description
+    if ( $Sort{UseAsValueSeries} ) {
+
+        # special handling if the sumfunction is used
+        my $SumRowArrayRef;
+        if ( $Param{StatRef}->{SumRow} ) {
+            $SumRowArrayRef = pop @{ $Param{StatArrayRef} };
+        }
+
+        # sort
+        my $DisableDefaultResultSort = grep {
+            $_->{DisableDefaultResultSort}
+                && $_->{DisableDefaultResultSort} == 1
+        } @{ $Param{StatRef}->{UseAsXvalue} };
+
+        if ( !$DisableDefaultResultSort ) {
+            @{ $Param{StatArrayRef} } = sort { $a->[0] cmp $b->[0] } @{ $Param{StatArrayRef} };
+        }
+
+        # special handling if the sumfunction is used
+        if ( $Param{StatRef}->{SumRow} ) {
+            push @{ $Param{StatArrayRef} }, $SumRowArrayRef;
+        }
+    }
+
+    return 1;
 }
 
 1;

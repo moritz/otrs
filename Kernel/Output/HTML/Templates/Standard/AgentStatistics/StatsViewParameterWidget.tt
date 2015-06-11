@@ -1,0 +1,245 @@
+# --
+# Copyright (C) 2001-2015 OTRS AG, http://otrs.com/
+# --
+# This software comes with ABSOLUTELY NO WARRANTY. For details, see
+# the enclosed file COPYING for license information (AGPL). If you
+# did not receive this file, see http://www.gnu.org/licenses/agpl.txt.
+# --
+
+<input type="hidden" id="PDFUsable" name="PDFUsable" value="[% Data.PDFUsable | html %]"/>
+
+<fieldset class="TableLike">
+    <label>[% Translate(Config("Stats::StatsHook")) | html %]:</label>
+    <div class="Value">[% Data.StatNumber | html %]</div>
+    <div class="Clear"></div>
+
+    <label>[% Translate("Title") | html %]:</label>
+    <div class="Value">[% Data.Title | html %]</div>
+    <div class="Clear"></div>
+
+    <label>[% Translate("Object") | html %]:</label>
+    <div class="Value">[% Translate(Data.ObjectName) | html %]</div>
+    <div class="Clear"></div>
+
+    <label>[% Translate("Description") | html %]:</label>
+    <div class="Value">[% Data.Description %]</div>
+    <div class="Clear"></div>
+
+#                       <label>[% Translate("Type") | html %]:</label>
+#                       <div class="Value">[% Translate(Data.StatType) | html %]</div>
+#                       <div class="Clear"></div>
+#
+[% RenderBlockStart("Format") %]
+    <label for="Format">[% Translate("Format") | html %]:</label>
+    <div class="Value">[% Data.SelectFormat %]</div>
+    <div class="Clear"></div>
+[% RenderBlockEnd("Format") %]
+[% RenderBlockStart("FormatFixed") %]
+    <input type="hidden" id="Format" name="Format" value="[% Data.FormatKey | html %]"/>
+    <label>[% Translate("Format") | html %]:</label>
+    <div class="Value">[% Translate(Data.Format) | html %]</div>
+    <div class="Clear"></div>
+[% RenderBlockEnd("FormatFixed") %]
+[% RenderBlockStart("Graphsize") %]
+    <label>[% Translate("Graphsize") | html %]:</label>
+    <div class="Value">[% Data.SelectGraphSize %]</div>
+    <div class="Clear"></div>
+[% RenderBlockEnd("Graphsize") %]
+[% RenderBlockStart("GraphsizeFixed") %]
+    <input type="hidden" name="GraphSize" value="[% Data.GraphSizeKey | html %]"/>
+    <label>[% Translate("Graphsize") | html %]:</label>
+    <div class="Value">[% Data.GraphSize %]</div>
+    <div class="Clear"></div>
+[% RenderBlockEnd("GraphsizeFixed") %]
+    <label>[% Translate("Sum rows") | html %]:</label>
+    <div class="Value">[% Translate(Data.SumRowValue) | html %]</div>
+    <div class="Clear"></div>
+
+    <label>[% Translate("Sum columns") | html %]:</label>
+    <div class="Value">[% Translate(Data.SumColValue) | html %]</div>
+    <div class="Clear"></div>
+
+    <label>[% Translate("Cache") | html %]:</label>
+    <div class="Value">[% Translate(Data.CacheValue) | html %]</div>
+    <div class="Clear"></div>
+
+    <label>[% Translate("Show as dashboard widget") | html %]:</label>
+    <div class="Value">[% Translate(Data.ShowAsDashboardWidgetValue) | html %]</div>
+    <div class="Clear"></div>
+
+    <label>[% Translate("Validity") | html %]:</label>
+    <div class="Value">[% Translate(Data.ValidValue) | html %]</div>
+    <div class="Clear"></div>
+[% RenderBlockStart("ExchangeAxis") %]
+    <label>[% Translate("Exchange Axis") | html %]:</label>
+    <div class="Value">[% Data.ExchangeAxis %]</div>
+    <div class="Clear"></div>
+[% RenderBlockEnd("ExchangeAxis") %]
+    <label>[% Translate("Created") | html %]:</label>
+    <div class="Value">[% Data.Created | Localize("TimeLong") %]</div>
+    <div class="Clear"></div>
+
+    <label>[% Translate("Created by") | html %]:</label>
+    <div class="Value">[% Data.CreatedBy | html %]</div>
+    <div class="Clear"></div>
+
+    <label>[% Translate("Changed") | html %]:</label>
+    <div class="Value">[% Data.Changed | Localize("TimeLong") %]</div>
+    <div class="Clear"></div>
+
+    <label>[% Translate("Changed by") | html %]:</label>
+    <div class="Value">[% Data.ChangedBy | html %]</div>
+    <div class="Clear"></div>
+</fieldset>
+
+[% RenderBlockStart("WidgetSettingsStart") %]
+<input type="hidden" name="[% Data.JSONFieldName | html %]" class="StatsSettingsJSON" />
+<div class="StatsSettingsBox" id="StatsSettingsBox[% Data.NamePref | html %]">
+[% RenderBlockEnd("WidgetSettingsStart") %]
+
+[% RenderBlockStart("Static") %]
+    <h2>
+        [% Translate("Configurable params of static stat") | html %]
+    </h2>
+    <fieldset class="TableLike">
+[% RenderBlockStart("ItemParam") %]
+        <label for="[% Data.Name | html %]">[% Translate(Data.Param) | html %]:</label>
+        <div class="Value">[% Data.Field %]</div>
+        <div class="Clear"></div>
+[% RenderBlockEnd("ItemParam") %]
+    </fieldset>
+[% RenderBlockEnd("Static") %]
+
+
+[% RenderBlockStart("Dynamic") %]
+    <h2>[% Translate(Data.Name) | html %]</h2>
+    <fieldset class="TableLike">
+[% RenderBlockStart("NoElement") %]
+        <p>[% Translate("No element selected.") | html %]</p>
+[% RenderBlockEnd("NoElement") %]
+[% RenderBlockStart("Element") %]
+        <label>[% Translate(Data.Name) | html %]</label>
+        <div class="Value">
+            <p>
+[% RenderBlockStart("TimePeriodFixed") %]
+                [% Translate("Between") | html %] [% Data.TimeStart %] [% Translate("and") | html %] [% Data.TimeStop %]<br/>
+[% RenderBlockEnd("TimePeriodFixed") %]
+[% RenderBlockStart("TimeRelativeFixed") %]
+                [% Translate("The last") | html %] [% Data.TimeRelativeCount %] [% Translate(Data.TimeRelativeUnit) | html %]<br/>
+[% RenderBlockEnd("TimeRelativeFixed") %]
+[% RenderBlockStart("TimeScaleFixed") %]
+                [% Translate("Scale") | html %]: [% Data.Count %] [% Translate(Data.Scale) | html %]
+[% RenderBlockEnd("TimeScaleFixed") %]
+[% RenderBlockStart("Fixed") %]
+                [% Data.Value %]<br/>
+[% RenderBlockEnd("Fixed") %]
+[% RenderBlockStart("MultiSelectField") %]
+                [% Data.SelectField %]
+[% RenderBlockEnd("MultiSelectField") %]
+[% RenderBlockStart("SelectField") %]
+                [% Data.SelectField %]
+[% RenderBlockEnd("SelectField") %]
+[% RenderBlockStart("InputField") %]
+                <input type="text" name="[% Data.Key | html %]" value="[% Data.Value | html %]" class="W25pc"/>
+[% RenderBlockEnd("InputField") %]
+            </p>
+        </div>
+        <div class="Clear"></div>
+
+[% RenderBlockStart("TimeScale") %]
+        <label><em>[% Translate("Scale") | html %]</em>:</label>
+        <div class="Value" data-min-seconds="[% Data.TimeScaleMinSeconds %]">
+            <p>
+                [% Data.TimeScaleCount %]
+                [% Data.TimeScaleUnit %]
+[% RenderBlockStart("TimeScaleInfo") %]
+                ([% Translate("minimal scale") | html %] [% Data.TimeScaleCountMax %] [% Translate(Data.TimeScaleUnitMax) | html %])
+[% RenderBlockEnd("TimeScaleInfo") %]
+            </p>
+        </div>
+        <div class="Clear"></div>
+[% RenderBlockEnd("TimeScale") %]
+
+[% RenderBlockStart("TimePeriod") %]
+        <label><em>[% Translate("Between") | html %]</em>:</label>
+        <div class="Value">
+            <p>
+                [% Data.TimeStart %] [% Translate("and") | html %] [% Data.TimeStop %]<br/>
+                ([% Translate("maximal period from") | html %] [% Data.TimeStartMax | Localize("TimeLong") %] [% Translate("to") | html %] [% Data.TimeStopMax | Localize("TimeLong") %])
+            </p>
+        </div>
+        <div class="Clear"></div>
+[% RenderBlockEnd("TimePeriod") %]
+
+[% RenderBlockStart("TimePeriodNotChangable") %]
+        <label><em>[% Translate("Between") | html %]</em>:</label>
+        <div class="Value">
+            <p>
+                [% Data.TimeStartMax | Localize("TimeLong") %] [% Translate("and") | html %] [% Data.TimeStopMax | Localize("TimeLong") %] ([% Translate("not changable for dashboard statistics") | html %]).
+            </p>
+        </div>
+        <div class="Clear"></div>
+[% RenderBlockEnd("TimePeriodNotChangable") %]
+
+[% RenderBlockStart("TimePeriodRelative") %]
+        <label><em>[% Translate("The last") | html %]</em>:</label>
+        <div class="Value" data-max-seconds="[% Data.TimeRelativeMaxSeconds %]">
+            <p>
+                [% Data.TimeRelativeCount %]
+                [% Data.TimeRelativeUnit %] ([% Translate("maximal period") | html %] [% Data.TimeRelativeCountMax %] [% Translate(Data.TimeRelativeUnitMax) | html %])
+            </p>
+        </div>
+        <div class="Clear"></div>
+[% RenderBlockEnd("TimePeriodRelative") %]
+
+[% RenderBlockEnd("Element") %]
+    </fieldset>
+[% RenderBlockEnd("Dynamic") %]
+
+[% RenderBlockStart("ChartTypeSelection") %]
+    <h2>[% Translate("Select Chart Type") | html %]</h2>
+    <fieldset class="TableLike">
+        <label>[% Translate("Chart Type") | html %]:</label>
+        <div class="Value">
+            <select id="ChartType" name="ChartType" data-selected="[% Data.ChartType %]">
+                <option value="Bar">[% Translate("Multi Bar Chart") | html %]</option>
+                <option value="Line">[% Translate("Multi Line Chart") | html %]</option>
+                <option value="StackedArea">[% Translate("Stacked Area Chart") | html %]</option>
+            </select>
+        </div>
+    </fieldset>
+[% RenderBlockEnd("ChartTypeSelection") %]
+
+[% RenderBlockStart("WidgetSettingsEnd") %]
+[% WRAPPER JSOnDocumentComplete %]
+<script type="text/javascript">//<![CDATA[
+Core.Agent.Dashboard.InitStatsConfiguration($('#StatsSettingsBox[% Data.NamePref | html %]'));
+//]]></script>
+[% END %]
+</div>
+[% RenderBlockEnd("WidgetSettingsEnd") %]
+
+[% RenderBlockStart("FormSubmit") %]
+<fieldset class="TableLike">
+    <div class="Value">
+        <button class="Primary CallForAction" type="submit" id="StartStatistic" name="Start" value="[% Translate("Start") | html %]"><span>[% Translate("Start") | html %]</span></button>
+    </div>
+</fieldset>
+
+[% WRAPPER JSOnDocumentComplete %]
+<script type="text/javascript">//<![CDATA[
+$('#StartStatistic').bind('click', function (Event) {
+    var Format = $('#Format').val(),
+        URL;
+
+    // Open both HTML and PDF output in a popup because PDF is shown inline
+    if (Format === 'Print') {
+        URL = '[% Env("Baselink") %]' + Core.AJAX.SerializeForm($('#Format').parents('form'));
+        Core.UI.Popup.OpenPopup(URL, 'Statistic', 'Default');
+        return false;
+    }
+});
+//]]></script>
+[% END %]
+
+[% RenderBlockEnd("FormSubmit") %]

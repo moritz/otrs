@@ -20,6 +20,11 @@
                     <li>
                         <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=Overview" class="CallForAction Fullsize Center"><span><i class="fa fa-caret-left"></i>[% Translate("Go to overview") | html %]</span></a>
                     </li>
+[% IF Data.AccessRw %]
+                    <li>
+                        <a href="[% Env("Baselink") %]Action=AgentStats;Subaction=Edit;StatID=[% Data.StatID | uri %]" class="CallForAction Fullsize Center"><span><i class="fa fa-edit"></i>[% Translate("Edit") | html %]</span></a>
+                    </li>
+[% END %]
                 </ul>
             </div>
         </div>
@@ -30,6 +35,15 @@
             <input type="hidden" name="Action"    value="[% Env("Action") %]"/>
             <input type="hidden" name="Subaction" value="Run"/>
             <input type="hidden" name="StatID"    value="[% Data.StatID | html %]"/>
+
+            <div class="WidgetSimple">
+                <div class="Header">
+                    <h2>[% Translate("Settings") | html %]</h2>
+                </div>
+                <div class="Content">
+                    [% Data.StatsViewParameterWidget %]
+                </div>
+            </div>
 
             <div class="WidgetSimple">
                 <div class="Header">
