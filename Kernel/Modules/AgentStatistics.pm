@@ -63,6 +63,9 @@ sub Run {
     if ( $Self->{Subaction} eq 'Overview' ) {
         return $Self->OverviewScreen();
     }
+    elsif ( $Self->{Subaction} eq 'Add' ) {
+        return $Self->AddScreen();
+    }
     elsif ( $Self->{Subaction} eq 'Import' ) {
         return $Self->ImportScreen();
     }
@@ -178,6 +181,25 @@ sub OverviewScreen {
             AccessRw => $Self->{AccessRw},
         },
         TemplateFile => 'AgentStatisticsOverview',
+    );
+    $Output .= $LayoutObject->Footer();
+    return $Output;
+}
+
+sub AddScreen {
+    my ( $Self, %Param ) = @_;
+
+    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+
+    if ( !$Self->{AccessRw} ) {
+        return $LayoutObject->NoPermission( WithHeader => 'yes' );
+    }
+
+    # build output
+    my $Output = $LayoutObject->Header( Title => 'Add New Statistic' );
+    $Output .= $LayoutObject->NavigationBar();
+    $Output .= $LayoutObject->Output(
+        TemplateFile => 'AgentStatisticsAdd',
     );
     $Output .= $LayoutObject->Footer();
     return $Output;

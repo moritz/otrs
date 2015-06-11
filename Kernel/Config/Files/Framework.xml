@@ -5398,6 +5398,7 @@ via the Preferences button after logging in.
                 </NavBar>
                 <Loader>
                     <JavaScript>Core.Agent.Stats.js</JavaScript>
+                    <CSS>Core.Agent.Statistics.css</CSS>
                 </Loader>
             </FrontendModuleReg>
         </Setting>

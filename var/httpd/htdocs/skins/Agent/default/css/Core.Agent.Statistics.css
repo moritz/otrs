@@ -1,0 +1,66 @@
+/**
+ * @project     OTRS (http://www.otrs.org) - Agent Frontend
+ * @copyright   OTRS AG
+ * @license     AGPL (http://www.gnu.org/licenses/agpl.txt)
+ */
+
+/**
+ * @package     Skin "Default"
+ * @section     Application
+ * @subsection  AgentStatistics
+ */
+
+@media screen,projection,tv,handheld {
+
+/**
+ * @subsubsection     General
+ */
+
+.BigButtons {
+    text-align: center;
+    padding: 20px 0px;
+}
+
+.BigButtons li {
+    display: inline-block;
+    border: 1px solid #ccc;
+    border-bottom: 1px solid #bbb;
+    margin-right: 15px;
+}
+
+.BigButtons li a {
+	border: 1px solid #FFF;
+    padding: 20px;
+    display: block;
+    width: 150px;
+	background: #eee;
+    cursor: pointer;
+    transition: all ease-in 0.2s;
+}
+
+.BigButtons li a:hover {
+	background-color: #e5e5e5;
+    border-color: #999;
+}
+
+.BigButtons li a strong,
+.BigButtons li a span {
+    display: block;
+}
+
+.BigButtons li a strong {
+    font-size: 15px;
+    margin: 3px 0px;
+}
+
+.BigButtons li a span {
+	color: #555;
+}
+
+.BigButtons li a i {
+	font-size: 25px;
+	color: #bbb;
+	margin-bottom: 5px;
+}
+
+} /* end @media */
