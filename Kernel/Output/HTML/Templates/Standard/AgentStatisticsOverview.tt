@@ -99,7 +99,7 @@
                             </td>
                             [% END %]
                             <td class="Center">
-                                <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=Run;StatID=[% Data.StatID | uri %]" class="AsBlock">
+                                <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=View;StatID=[% Data.StatID | uri %]" class="AsBlock">
                                     <i class="fa fa-caret-square-o-right"></i>
                                     [% Translate('Run now') | html %]
                                 </a>

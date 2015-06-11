@@ -13,6 +13,8 @@ use warnings;
 
 use List::Util qw( first );
 
+use Kernel::System::VariableCheck qw(:all);
+
 #use Kernel::Language qw(Translatable);
 
 our $ObjectManagerDisabled = 1;
@@ -72,6 +74,9 @@ sub Run {
     }
     elsif ( $Self->{Subaction} eq 'Edit' ) {
         return $Self->EditScreen();
+    }
+    elsif ( $Self->{Subaction} eq 'View' ) {
+        return $Self->ViewScreen();
     }
 
     # No (known) subaction?
@@ -317,6 +322,50 @@ sub EditScreen {
         Data         => {
             %Frontend,
             %{$Stat},
+        },
+    );
+    $Output .= $LayoutObject->Footer();
+    return $Output;
+}
+
+sub ViewScreen {
+    my ( $Self, %Param ) = @_;
+
+    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+    my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
+    my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
+
+    # permission check
+    $Self->{AccessRo} || return $LayoutObject->NoPermission( WithHeader => 'yes' );
+
+    # get StatID
+    my $StatID = $ParamObject->GetParam( Param => 'StatID' );
+    if ( !$StatID ) {
+        return $LayoutObject->ErrorScreen( Message => 'Need StatID!' );
+    }
+
+    # get message if one available
+    #my $Message = $ParamObject->GetParam( Param => 'Message' );
+
+    # Get all statistics that the current user may see (does permission check).
+    my $StatsList = $Self->{StatsObject}->StatsListGet();
+
+    my $Stat = $StatsList->{$StatID};
+
+    # get param
+    if ( !IsHashRefWithData($Stat) ) {
+        return $LayoutObject->ErrorScreen(
+            Message => 'Could not load stat.',
+        );
+    }
+
+    my $Output = $LayoutObject->Header( Title => 'View' );
+    $Output .= $LayoutObject->NavigationBar();
+    $Output .= $LayoutObject->Output(
+        TemplateFile => 'AgentStatisticsView',
+        Data         => {
+            #%Frontend,
+            #%{$Stat},
         },
     );
     $Output .= $LayoutObject->Footer();
