@@ -9,26 +9,14 @@
 <input type="hidden" id="PDFUsable" name="PDFUsable" value="[% Data.PDFUsable | html %]"/>
 
 <fieldset class="TableLike">
-    <label>[% Translate(Config("Stats::StatsHook")) | html %]:</label>
-    <div class="Value">[% Data.StatNumber | html %]</div>
-    <div class="Clear"></div>
-
-    <label>[% Translate("Title") | html %]:</label>
-    <div class="Value">[% Data.Title | html %]</div>
-    <div class="Clear"></div>
-
     <label>[% Translate("Object") | html %]:</label>
     <div class="Value">[% Translate(Data.ObjectName) | html %]</div>
     <div class="Clear"></div>
 
     <label>[% Translate("Description") | html %]:</label>
-    <div class="Value">[% Data.Description %]</div>
+    <div class="Value">[% Data.Description | html %]</div>
     <div class="Clear"></div>
 
-#                       <label>[% Translate("Type") | html %]:</label>
-#                       <div class="Value">[% Translate(Data.StatType) | html %]</div>
-#                       <div class="Clear"></div>
-#
 [% RenderBlockStart("Format") %]
     <label for="Format">[% Translate("Format") | html %]:</label>
     <div class="Value">[% Data.SelectFormat %]</div>
@@ -51,45 +39,12 @@
     <div class="Value">[% Data.GraphSize %]</div>
     <div class="Clear"></div>
 [% RenderBlockEnd("GraphsizeFixed") %]
-    <label>[% Translate("Sum rows") | html %]:</label>
-    <div class="Value">[% Translate(Data.SumRowValue) | html %]</div>
-    <div class="Clear"></div>
 
-    <label>[% Translate("Sum columns") | html %]:</label>
-    <div class="Value">[% Translate(Data.SumColValue) | html %]</div>
-    <div class="Clear"></div>
-
-    <label>[% Translate("Cache") | html %]:</label>
-    <div class="Value">[% Translate(Data.CacheValue) | html %]</div>
-    <div class="Clear"></div>
-
-    <label>[% Translate("Show as dashboard widget") | html %]:</label>
-    <div class="Value">[% Translate(Data.ShowAsDashboardWidgetValue) | html %]</div>
-    <div class="Clear"></div>
-
-    <label>[% Translate("Validity") | html %]:</label>
-    <div class="Value">[% Translate(Data.ValidValue) | html %]</div>
-    <div class="Clear"></div>
 [% RenderBlockStart("ExchangeAxis") %]
     <label>[% Translate("Exchange Axis") | html %]:</label>
     <div class="Value">[% Data.ExchangeAxis %]</div>
     <div class="Clear"></div>
 [% RenderBlockEnd("ExchangeAxis") %]
-    <label>[% Translate("Created") | html %]:</label>
-    <div class="Value">[% Data.Created | Localize("TimeLong") %]</div>
-    <div class="Clear"></div>
-
-    <label>[% Translate("Created by") | html %]:</label>
-    <div class="Value">[% Data.CreatedBy | html %]</div>
-    <div class="Clear"></div>
-
-    <label>[% Translate("Changed") | html %]:</label>
-    <div class="Value">[% Data.Changed | Localize("TimeLong") %]</div>
-    <div class="Clear"></div>
-
-    <label>[% Translate("Changed by") | html %]:</label>
-    <div class="Value">[% Data.ChangedBy | html %]</div>
-    <div class="Clear"></div>
 </fieldset>
 
 [% RenderBlockStart("WidgetSettingsStart") %]
@@ -120,29 +75,27 @@
 [% RenderBlockStart("Element") %]
         <label>[% Translate(Data.Name) | html %]</label>
         <div class="Value">
-            <p>
 [% RenderBlockStart("TimePeriodFixed") %]
-                [% Translate("Between") | html %] [% Data.TimeStart %] [% Translate("and") | html %] [% Data.TimeStop %]<br/>
+            [% Translate("Between") | html %] [% Data.TimeStart %] [% Translate("and") | html %] [% Data.TimeStop %]<br/>
 [% RenderBlockEnd("TimePeriodFixed") %]
 [% RenderBlockStart("TimeRelativeFixed") %]
-                [% Translate("The last") | html %] [% Data.TimeRelativeCount %] [% Translate(Data.TimeRelativeUnit) | html %]<br/>
+            [% Translate("The last") | html %] [% Data.TimeRelativeCount %] [% Translate(Data.TimeRelativeUnit) | html %]<br/>
 [% RenderBlockEnd("TimeRelativeFixed") %]
 [% RenderBlockStart("TimeScaleFixed") %]
-                [% Translate("Scale") | html %]: [% Data.Count %] [% Translate(Data.Scale) | html %]
+            [% Translate("Scale") | html %]: [% Data.Count %] [% Translate(Data.Scale) | html %]
 [% RenderBlockEnd("TimeScaleFixed") %]
 [% RenderBlockStart("Fixed") %]
-                [% Data.Value %]<br/>
+            [% Data.Value %]
 [% RenderBlockEnd("Fixed") %]
 [% RenderBlockStart("MultiSelectField") %]
-                [% Data.SelectField %]
+            [% Data.SelectField %]
 [% RenderBlockEnd("MultiSelectField") %]
 [% RenderBlockStart("SelectField") %]
-                [% Data.SelectField %]
+            [% Data.SelectField %]
 [% RenderBlockEnd("SelectField") %]
 [% RenderBlockStart("InputField") %]
-                <input type="text" name="[% Data.Key | html %]" value="[% Data.Value | html %]" class="W25pc"/>
+            <input type="text" name="[% Data.Key | html %]" value="[% Data.Value | html %]" class="W25pc"/>
 [% RenderBlockEnd("InputField") %]
-            </p>
         </div>
         <div class="Clear"></div>
 

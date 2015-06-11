@@ -60,12 +60,6 @@ sub StatsViewParameterWidget {
     # if no object name is defined use an empty string
     $Stat->{ObjectName} ||= '';
 
-    $Stat->{Description} = $LayoutObject->Ascii2Html(
-        Text           => $Stat->{Description},
-        HTMLResultMode => 1,
-        NewLine        => 72,
-    );
-
     # create format select box
     my %SelectFormat;
     my $Flag    = 0;
