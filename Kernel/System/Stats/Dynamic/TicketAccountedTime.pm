@@ -678,26 +678,38 @@ sub GetObjectAttributes {
 sub GetStatTablePreview {
     my ( $Self, %Param ) = @_;
 
-    my $HeaderLine = $Self->GetHeaderLine();
-    return if !$HeaderLine;
-
     my @StatArray;
     my $Count;
 
-    ROW:
-    for my $Row ( sort keys %{ $Param{TableStructure} } ) {
-        my @ResultRow = ($Row);
-        for ( 2 .. scalar @{$HeaderLine} ) {
-            push @ResultRow, int rand 50;
+    if ( $Param{XValue}{Element} && $Param{XValue}{Element} eq 'KindsOfReporting' ) {
+        for my $Row ( sort keys %{ $Param{TableStructure} } ) {
+            my @ResultRow        = ($Row);
+            for ( @{ $Param{XValue}{SelectedValues} } ) {
+                push @ResultRow, int rand 50;
+            }
+            push @StatArray, \@ResultRow;
         }
-        push @StatArray, \@ResultRow;
-        last ROW if $Count++ > 10;
     }
+    else {
+        for my $Row ( sort keys %{ $Param{TableStructure} } ) {
+            my @ResultRow = ($Row);
+            for my $Cell ( @{ $Param{TableStructure}{$Row} } ) {
+                push @ResultRow, int rand 50;
+            }
+            push @StatArray, \@ResultRow;
+        }
+    }
+
     return @StatArray;
 }
 
 sub GetStatTable {
     my ( $Self, %Param ) = @_;
+
+    $Kernel::OM->Get('Kernel::System::Log')->Log(
+        Priority => "error",
+        Message  => "stack"
+    );
     my @StatArray;
     if ( $Param{XValue}{Element} && $Param{XValue}{Element} eq 'KindsOfReporting' ) {
 
