@@ -582,14 +582,22 @@ sub StatsViewParameterWidget {
 sub PreviewContainer {
     my ( $Self, %Param ) = @_;
 
+    my $Stat = $Param{Stat};
+
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+
+    my $PreviewResult = $Self->{StatsObject}->StatsRun(
+        StatID   => $Stat->{StatID},
+        GetParam => $Stat,
+    );
 
     my $Output .= $LayoutObject->Output(
         TemplateFile => 'AgentStatistics/PreviewContainer',
         Data         => {
 
             #%Frontend,
-            #%{$Stat},
+            %{$Stat},
+            PreviewResult => $PreviewResult,
         },
     );
     return $Output;

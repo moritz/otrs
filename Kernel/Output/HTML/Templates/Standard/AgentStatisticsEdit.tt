@@ -32,6 +32,7 @@
             <input type="hidden" name="Home"      value="EditSpecification"/>
             <input type="hidden" name="StatID"    value="[% Data.StatID | html %]"/>
 
+            [% IF Data.StatType == 'dynamic' %]
             <div class="WidgetSimple">
                 <div class="Header">
                     <div class="WidgetAction Toggle">
@@ -52,8 +53,9 @@
                     <button class="CallForAction EditRestrictions Right"><span>Edit Restrictions</span></button>
                 </div>
             </div>
+            [% END %]
 
-            <div class="WidgetSimple Collapsed">
+            <div class="WidgetSimple">
                 <div class="Header">
                     <div class="WidgetAction Toggle">
                         <a href="#" title="[% Translate("Show or hide the content") | html %]"><i class="fa fa-caret-right"></i><i class="fa fa-caret-down"></i></a>

@@ -324,14 +324,16 @@ sub EditScreen {
         StatID => $Stat->{StatID},
     );
 
-    $Kernel::OM->ObjectParamAdd(
-        'Kernel::Output::HTML::Statistics::View' => {
-            StatsObject => $Self->{StatsObject},
-        },
-    );
-    $Frontend{PreviewContainer} = $Kernel::OM->Get('Kernel::Output::HTML::Statistics::View')->PreviewContainer(
-        Stat => $Stat,
-    );
+    if ( $Stat->{StatType} eq 'dynamic' ) {
+        $Kernel::OM->ObjectParamAdd(
+            'Kernel::Output::HTML::Statistics::View' => {
+                StatsObject => $Self->{StatsObject},
+            },
+        );
+        $Frontend{PreviewContainer} = $Kernel::OM->Get('Kernel::Output::HTML::Statistics::View')->PreviewContainer(
+            Stat => $Stat,
+        );
+    }
 
     my $Output = $LayoutObject->Header( Title => 'Edit' );
     $Output .= $LayoutObject->NavigationBar();
