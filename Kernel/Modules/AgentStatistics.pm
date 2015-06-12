@@ -393,9 +393,10 @@ sub ViewScreen {
             StatsObject => $Self->{StatsObject},
         },
     );
-    $Frontend{PreviewContainer} = $Kernel::OM->Get('Kernel::Output::HTML::Statistics::View')->StatsViewParameterWidget(
+    $Frontend{StatsViewParameterWidget}
+        = $Kernel::OM->Get('Kernel::Output::HTML::Statistics::View')->StatsViewParameterWidget(
         Stat => $Stat,
-    );
+        );
 
     my $Output = $LayoutObject->Header( Title => 'View' );
     $Output .= $LayoutObject->NavigationBar();

@@ -5479,6 +5479,9 @@ via the Preferences button after logging in.
                 <Item Key="Print">Print</Item>
                 <Item Key="CSV">CSV</Item>
                 <Item Key="Excel">Excel</Item>
+                <Item Key="D3::MultiBarChart">Graph: Multi Bar Chart</Item>
+                <Item Key="D3::MultiLineChart">Graph: Multi Line Chart</Item>
+                <Item Key="D3::StackedAreaChart">Graph: Stacked Area Chart</Item>
                 <Item Key="GD::Graph::lines">graph-lines</Item>
                 <Item Key="GD::Graph::bars">graph-bars</Item>
                 <Item Key="GD::Graph::hbars">graph-hbars</Item>

@@ -8,16 +8,20 @@
 
 package Kernel::Output::HTML::Statistics::View;
 
+## nofilter(TidyAll::Plugin::OTRS::Perl::PodChecker)
+
 use strict;
 use warnings;
 
 our @ObjectDependencies = (
     'Kernel::Config',
+    'Kernel::Language',
     'Kernel::Output::HTML::Layout',
     'Kernel::System::Log',
     'Kernel::System::PDF',
     'Kernel::System::Stats',
     'Kernel::System::Ticket',
+    'Kernel::System::Time',
     'Kernel::System::User',
     'Kernel::System::Web::Request',
 );
@@ -627,6 +631,397 @@ sub _Notify {
         $NotifyOutput .= $LayoutObject->Notify( %{$Ref} );
     }
     return $NotifyOutput;
+}
+
+sub _Timeoutput {
+    my ( $Self, %Param ) = @_;
+
+    my %Timeoutput;
+
+    # get layout object
+    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+
+    # check if need params are available
+    if ( !$Param{TimePeriodFormat} ) {
+        return $LayoutObject->ErrorScreen(
+            Message => '_Timeoutput: Need TimePeriodFormat!'
+        );
+    }
+
+    # get time object
+    my $TimeObject = $Kernel::OM->Get('Kernel::System::Time');
+
+    # get time
+    my ( $Sec, $Min, $Hour, $Day, $Month, $Year ) = $TimeObject->SystemTime2Date(
+        SystemTime => $TimeObject->SystemTime(),
+    );
+    my $Element = $Param{Element};
+    my %TimeConfig;
+
+    # default time configuration
+    $TimeConfig{Format}                     = $Param{TimePeriodFormat};
+    $TimeConfig{ $Element . 'StartYear' }   = $Year - 1;
+    $TimeConfig{ $Element . 'StartMonth' }  = 1;
+    $TimeConfig{ $Element . 'StartDay' }    = 1;
+    $TimeConfig{ $Element . 'StartHour' }   = 0;
+    $TimeConfig{ $Element . 'StartMinute' } = 0;
+    $TimeConfig{ $Element . 'StartSecond' } = 1;
+    $TimeConfig{ $Element . 'StopYear' }    = $Year;
+    $TimeConfig{ $Element . 'StopMonth' }   = 12;
+    $TimeConfig{ $Element . 'StopDay' }     = 31;
+    $TimeConfig{ $Element . 'StopHour' }    = 23;
+    $TimeConfig{ $Element . 'StopMinute' }  = 59;
+    $TimeConfig{ $Element . 'StopSecond' }  = 59;
+    for (qw(Start Stop)) {
+        $TimeConfig{Prefix} = $Element . $_;
+
+        # time setting if available
+        if (
+            $Param{ 'Time' . $_ }
+            && $Param{ 'Time' . $_ } =~ m{^(\d\d\d\d)-(\d\d)-(\d\d)\s(\d\d):(\d\d):(\d\d)$}xi
+            )
+        {
+            $TimeConfig{ $Element . $_ . 'Year' }   = $1;
+            $TimeConfig{ $Element . $_ . 'Month' }  = $2;
+            $TimeConfig{ $Element . $_ . 'Day' }    = $3;
+            $TimeConfig{ $Element . $_ . 'Hour' }   = $4;
+            $TimeConfig{ $Element . $_ . 'Minute' } = $5;
+            $TimeConfig{ $Element . $_ . 'Second' } = $6;
+        }
+        $Timeoutput{ 'Time' . $_ } = $LayoutObject->BuildDateSelection(%TimeConfig);
+    }
+
+    # Solution I (TimeExtended)
+    my %TimeLists;
+    for ( 1 .. 60 ) {
+        $TimeLists{TimeRelativeCount}{$_} = sprintf( "%02d", $_ );
+        $TimeLists{TimeScaleCount}{$_}    = sprintf( "%02d", $_ );
+    }
+    for (qw(TimeRelativeCount TimeScaleCount)) {
+        $Timeoutput{$_} = $LayoutObject->BuildSelection(
+            Data       => $TimeLists{$_},
+            Name       => $Element . $_,
+            SelectedID => $Param{$_},
+        );
+    }
+
+    if ( $Param{TimeRelativeCount} && $Param{TimeRelativeUnit} ) {
+        $Timeoutput{CheckedRelative} = 'checked="checked"';
+    }
+    else {
+        $Timeoutput{CheckedAbsolut} = 'checked="checked"';
+    }
+
+    my %TimeScale = _TimeScaleBuildSelection();
+
+    $Timeoutput{TimeScaleUnit} = $LayoutObject->BuildSelection(
+        %TimeScale,
+        Name       => $Element,
+        SelectedID => $Param{SelectedValues}[0],
+    );
+
+    $Timeoutput{TimeRelativeUnit} = $LayoutObject->BuildSelection(
+        %TimeScale,
+        Name       => $Element . 'TimeRelativeUnit',
+        SelectedID => $Param{TimeRelativeUnit},
+        OnChange   => "Core.Agent.Stats.SelectRadiobutton('Relativ', '$Element" . "TimeSelect')",
+    );
+
+    # to show only the selected Attributes in the view mask
+    my $Multiple = 1;
+    my $Size     = 5;
+
+    if ( $Param{OnlySelectedAttributes} ) {
+
+        $TimeScale{Data} = $Param{SelectedValues};
+
+        $Multiple = 0;
+        $Size     = 1;
+    }
+
+    $Timeoutput{TimeSelectField} = $LayoutObject->BuildSelection(
+        %TimeScale,
+        Name       => $Element,
+        SelectedID => $Param{SelectedValues},
+        Multiple   => $Multiple,
+        Size       => $Size,
+    );
+
+    return %Timeoutput;
+}
+
+sub _TimeScaleBuildSelection {
+
+    my %TimeScaleBuildSelection = (
+        Data => {
+            Second => 'second(s)',
+            Minute => 'minute(s)',
+            Hour   => 'hour(s)',
+            Day    => 'day(s)',
+            Week   => 'week(s)',
+            Month  => 'month(s)',
+            Year   => 'year(s)',
+        },
+        Sort           => 'IndividualKey',
+        SortIndividual => [ 'Second', 'Minute', 'Hour', 'Day', 'Week', 'Month', 'Year' ]
+    );
+
+    return %TimeScaleBuildSelection;
+}
+
+sub _TimeScale {
+    my %TimeScale = (
+        'Second' => {
+            Position => 1,
+            Value    => 'second(s)',
+        },
+        'Minute' => {
+            Position => 2,
+            Value    => 'minute(s)',
+        },
+        'Hour' => {
+            Position => 3,
+            Value    => 'hour(s)',
+        },
+        'Day' => {
+            Position => 4,
+            Value    => 'day(s)',
+        },
+        'Week' => {
+            Position => 5,
+            Value    => 'week(s)',
+        },
+        'Month' => {
+            Position => 6,
+            Value    => 'month(s)',
+        },
+        'Year' => {
+            Position => 7,
+            Value    => 'year(s)',
+        },
+    );
+
+    return \%TimeScale;
+}
+
+=item _ColumnAndRowTranslation()
+
+translate the column and row name if needed
+
+    $StatsObject->_ColumnAndRowTranslation(
+        StatArrayRef => $StatArrayRef,
+        HeadArrayRef => $HeadArrayRef,
+        StatRef      => $StatRef,
+        ExchangeAxis => 1 | 0,
+    );
+
+=cut
+
+sub _ColumnAndRowTranslation {
+    my ( $Self, %Param ) = @_;
+
+    # check if need params are available
+    for my $NeededParam (qw(StatArrayRef HeadArrayRef StatRef)) {
+        if ( !$Param{$NeededParam} ) {
+            return $Kernel::OM->Get('Kernel::Output::HTML::Layout')->ErrorScreen(
+                Message => "_ColumnAndRowTranslation: Need $NeededParam!"
+            );
+        }
+    }
+
+    # get config object
+    my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
+
+    # create language object
+    $Kernel::OM->ObjectParamAdd(
+        'Kernel::Language' => {
+            UserLanguage => $Param{UserLanguage} || $ConfigObject->Get('DefaultLanguage') || 'en',
+            }
+    );
+    my $LanguageObject = $Kernel::OM->Get('Kernel::Language');
+
+    # find out, if the column or row names should be translated
+    my %Translation;
+    my %Sort;
+
+    for my $Use (qw( UseAsXvalue UseAsValueSeries )) {
+        if (
+            $Param{StatRef}->{StatType} eq 'dynamic'
+            && $Param{StatRef}->{$Use}
+            && ref( $Param{StatRef}->{$Use} ) eq 'ARRAY'
+            )
+        {
+            my @Array = @{ $Param{StatRef}->{$Use} };
+
+            ELEMENT:
+            for my $Element (@Array) {
+                next ELEMENT if !$Element->{SelectedValues};
+
+                if ( $Element->{Translation} && $Element->{Block} eq 'Time' ) {
+                    $Translation{$Use} = 'Time';
+                }
+                elsif ( $Element->{Translation} ) {
+                    $Translation{$Use} = 'Common';
+                }
+                else {
+                    $Translation{$Use} = '';
+                }
+
+                if (
+                    $Element->{Translation}
+                    && $Element->{Block} ne 'Time'
+                    && !$Element->{SortIndividual}
+                    )
+                {
+                    $Sort{$Use} = 1;
+                }
+                last ELEMENT;
+            }
+        }
+    }
+
+    # check if the axis are changed
+    if ( $Param{ExchangeAxis} ) {
+        my $UseAsXvalueOld = $Translation{UseAsXvalue};
+        $Translation{UseAsXvalue}      = $Translation{UseAsValueSeries};
+        $Translation{UseAsValueSeries} = $UseAsXvalueOld;
+
+        my $SortUseAsXvalueOld = $Sort{UseAsXvalue};
+        $Sort{UseAsXvalue}      = $Sort{UseAsValueSeries};
+        $Sort{UseAsValueSeries} = $SortUseAsXvalueOld;
+    }
+
+    # translate the headline
+    $Param{HeadArrayRef}->[0] = $LanguageObject->Translate( $Param{HeadArrayRef}->[0] );
+
+    if ( $Translation{UseAsXvalue} && $Translation{UseAsXvalue} eq 'Time' ) {
+        for my $Word ( @{ $Param{HeadArrayRef} } ) {
+            if ( $Word =~ m{ ^ (\w+?) ( \s \d+ ) $ }smx ) {
+                my $TranslatedWord = $LanguageObject->Translate($1);
+                $Word =~ s{ ^ ( \w+? ) ( \s \d+ ) $ }{$TranslatedWord$2}smx;
+            }
+        }
+    }
+
+    elsif ( $Translation{UseAsXvalue} ) {
+        for my $Word ( @{ $Param{HeadArrayRef} } ) {
+            $Word = $LanguageObject->Translate($Word);
+        }
+    }
+
+    # sort the headline
+    if ( $Sort{UseAsXvalue} ) {
+        my @HeadOld = @{ $Param{HeadArrayRef} };
+        shift @HeadOld;    # because the first value is no sortable column name
+
+        # special handling if the sumfunction is used
+        my $SumColRef;
+        if ( $Param{StatRef}->{SumRow} ) {
+            $SumColRef = pop @HeadOld;
+        }
+
+        # sort
+        my @SortedHead = sort { $a cmp $b } @HeadOld;
+
+        # special handling if the sumfunction is used
+        if ( $Param{StatRef}->{SumCol} ) {
+            push @SortedHead, $SumColRef;
+            push @HeadOld,    $SumColRef;
+        }
+
+        # add the row names to the new StatArray
+        my @StatArrayNew;
+        for my $Row ( @{ $Param{StatArrayRef} } ) {
+            push @StatArrayNew, [ $Row->[0] ];
+        }
+
+        # sort the values
+        for my $ColumnName (@SortedHead) {
+            my $Counter = 0;
+            COLUMNNAMEOLD:
+            for my $ColumnNameOld (@HeadOld) {
+                $Counter++;
+                next COLUMNNAMEOLD if $ColumnNameOld ne $ColumnName;
+
+                for my $RowLine ( 0 .. $#StatArrayNew ) {
+                    push @{ $StatArrayNew[$RowLine] }, $Param{StatArrayRef}->[$RowLine]->[$Counter];
+                }
+                last COLUMNNAMEOLD;
+            }
+        }
+
+        # bring the data back to the references
+        unshift @SortedHead, $Param{HeadArrayRef}->[0];
+        @{ $Param{HeadArrayRef} } = @SortedHead;
+        @{ $Param{StatArrayRef} } = @StatArrayNew;
+    }
+
+    # translate the row description
+    if ( $Translation{UseAsValueSeries} && $Translation{UseAsValueSeries} eq 'Time' ) {
+        for my $Word ( @{ $Param{StatArrayRef} } ) {
+            if ( $Word->[0] =~ m{ ^ (\w+?) ( \s \d+ ) $ }smx ) {
+                my $TranslatedWord = $LanguageObject->Translate($1);
+                $Word->[0] =~ s{ ^ ( \w+? ) ( \s \d+ ) $ }{$TranslatedWord$2}smx;
+            }
+        }
+    }
+    elsif ( $Translation{UseAsValueSeries} ) {
+
+        # translate
+        for my $Word ( @{ $Param{StatArrayRef} } ) {
+            $Word->[0] = $LanguageObject->Translate( $Word->[0] );
+        }
+    }
+
+    # sort the row description
+    if ( $Sort{UseAsValueSeries} ) {
+
+        # special handling if the sumfunction is used
+        my $SumRowArrayRef;
+        if ( $Param{StatRef}->{SumRow} ) {
+            $SumRowArrayRef = pop @{ $Param{StatArrayRef} };
+        }
+
+        # sort
+        my $DisableDefaultResultSort = grep {
+            $_->{DisableDefaultResultSort}
+                && $_->{DisableDefaultResultSort} == 1
+        } @{ $Param{StatRef}->{UseAsXvalue} };
+
+        if ( !$DisableDefaultResultSort ) {
+            @{ $Param{StatArrayRef} } = sort { $a->[0] cmp $b->[0] } @{ $Param{StatArrayRef} };
+        }
+
+        # special handling if the sumfunction is used
+        if ( $Param{StatRef}->{SumRow} ) {
+            push @{ $Param{StatArrayRef} }, $SumRowArrayRef;
+        }
+    }
+
+    return 1;
+}
+
+# ATTENTION: this function delivers only approximations!!!
+sub _TimeInSeconds {
+    my ( $Self, %Param ) = @_;
+
+    # check if need params are available
+    if ( !$Param{TimeUnit} ) {
+        return $Kernel::OM->Get('Kernel::Output::HTML::Layout')
+            ->ErrorScreen( Message => '_TimeInSeconds: Need TimeUnit!' );
+    }
+
+    my %TimeInSeconds = (
+        Year   => 31536000,    # 60 * 60 * 60 * 365
+        Month  => 2592000,     # 60 * 60 * 24 * 30
+        Week   => 604800,      # 60 * 60 * 24 * 7
+        Day    => 86400,       # 60 * 60 * 24
+        Hour   => 3600,        # 60 * 60
+        Minute => 60,
+        Second => 1,
+    );
+
+    return $TimeInSeconds{ $Param{TimeUnit} };
 }
 
 sub _StopWordsServerErrorsGet {
