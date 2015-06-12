@@ -1987,6 +1987,7 @@ run a statistic.
     my $StatArray = $StatsObject->StatsRun(
         StatID     => '123',
         GetParam   => \%GetParam,
+        Preview    => 1,        # optional, return fake data for preview (only for dynamic stats)
     );
 
 =cut
@@ -2014,6 +2015,9 @@ sub StatsRun {
 
     # get data if it is a static stats
     if ( $Stat->{StatType} eq 'static' ) {
+
+        return if $Param{Preview};    # not supported for static stats
+
         @Result = $Self->_GenerateStaticStats(
             ObjectModule => $Stat->{ObjectModule},
             GetParam     => $Param{GetParam},
@@ -2034,11 +2038,12 @@ sub StatsRun {
             Title            => $Stat->{Title},
             StatID           => $Stat->{StatID},
             Cache            => $Stat->{Cache},
+            Preview          => $Param{Preview},
         );
     }
 
     # build sum in row or col
-    if ( ( $Stat->{SumRow} || $Stat->{SumCol} ) && $Stat->{Format} !~ m{^GD::Graph\.*}x ) {
+    if ( @Result && ( $Stat->{SumRow} || $Stat->{SumCol} ) && $Stat->{Format} !~ m{^GD::Graph\.*}x ) {
         return $Self->SumBuild(
             Array  => \@Result,
             SumRow => $Stat->{SumRow},
@@ -2767,7 +2772,8 @@ sub _GenerateStaticStats {
         UseAsRestriction => \UseAsRestrictionElements,
         Title            => 'TicketStat',
         StatID           => 123,
-        Cache            => 1,      # optional
+        Cache            => 1,      # optional,
+        Preview          => 1,      # optional, generate fake data
     );
 
 =cut
@@ -2780,6 +2786,8 @@ sub _GenerateDynamicStats {
     my @HeaderLine;
     my $TitleTimeStart = '';
     my $TitleTimeStop  = '';
+
+    my $Preview = $Param{Preview};
 
     NEED:
     for my $Need (qw(ObjectModule UseAsXvalue UseAsValueSeries Title Object StatID)) {
@@ -3541,7 +3549,7 @@ sub _GenerateDynamicStats {
     my $CacheString = $Self->_GetCacheString(%Param);
 
     # take the cache value if configured and available
-    if ( $Param{Cache} ) {
+    if ( $Param{Cache} && !$Preview ) {
         my @StatArray = $Self->_GetResultCache(
             Filename => 'Stats' . $Param{StatID} . '-' . $CacheString . '.cache',
         );
@@ -3594,22 +3602,45 @@ sub _GenerateDynamicStats {
     }
 
     my @DataArray;
-    if ( $StatObject->can('GetStatTable') ) {
 
-        # get the whole stats table
-        @DataArray = $StatObject->GetStatTable(
-            ValueSeries    => $Param{UseAsValueSeries},    #\%ValueSeries,
-            XValue         => $Xvalue,
-            Restrictions   => \%RestrictionAttribute,
-            TableStructure => \%TableStructure,
-        );
+    # Dynamic List Statistic
+    if ( $StatObject->can('GetStatTable') ) {
+        if ($Preview) {
+            return if !$StatObject->can('GetStatTablePreview');
+
+            @DataArray = $StatObject->GetStatTablePreview(
+                ValueSeries    => $Param{UseAsValueSeries},    #\%ValueSeries,
+                XValue         => $Xvalue,
+                Restrictions   => \%RestrictionAttribute,
+                TableStructure => \%TableStructure,
+            );
+        }
+        else {
+            # get the whole stats table
+            @DataArray = $StatObject->GetStatTable(
+                ValueSeries    => $Param{UseAsValueSeries},    #\%ValueSeries,
+                XValue         => $Xvalue,
+                Restrictions   => \%RestrictionAttribute,
+                TableStructure => \%TableStructure,
+            );
+        }
     }
+
+    # Dynamic Matrix Statistic
     else {
+        if ($Preview) {
+            return if !$StatObject->can('GetStatElementPreview');
+        }
+
         for my $Row ( sort keys %TableStructure ) {
             my @ResultRow = ($Row);
             for my $Cell ( @{ $TableStructure{$Row} } ) {
-                my $Quantity = $StatObject->GetStatElement( %{$Cell} );
-                push @ResultRow, $Quantity;
+                if ($Preview) {
+                    push @ResultRow, $StatObject->GetStatElementPreview( %{$Cell} );
+                }
+                else {
+                    push @ResultRow, $StatObject->GetStatElement( %{$Cell} );
+                }
             }
             push @DataArray, \@ResultRow;
         }

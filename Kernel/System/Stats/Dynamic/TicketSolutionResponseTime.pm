@@ -653,6 +653,27 @@ sub GetObjectAttributes {
     return @ObjectAttributes;
 }
 
+sub GetStatTablePreview {
+    my ( $Self, %Param ) = @_;
+
+    my $HeaderLine = $Self->GetHeaderLine();
+    return if !$HeaderLine;
+
+    my @StatArray;
+    my $Count;
+
+    ROW:
+    for my $Row ( sort keys %{ $Param{TableStructure} } ) {
+        my @ResultRow = ($Row);
+        for ( 2 .. scalar @{$HeaderLine} ) {
+            push @ResultRow, int rand 50;
+        }
+        push @StatArray, \@ResultRow;
+        last ROW if $Count++ > 10;
+    }
+    return @StatArray;
+}
+
 # REMARK: is the same code as in TicketAccountedTime.pm
 
 sub GetStatTable {
