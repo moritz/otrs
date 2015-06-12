@@ -335,7 +335,7 @@ Core.UI.AdvancedChart = (function (TargetNS) {
         RawData.shift();
         Headings = RawData.shift();
 
-        if (typeof PreferencesData.Bar !== 'undefined') {
+        if (PreferencesData && typeof PreferencesData.Bar !== 'undefined') {
             PreferencesData = PreferencesData.Bar;
         }
         else {
@@ -483,7 +483,7 @@ Core.UI.AdvancedChart = (function (TargetNS) {
         RawData.shift();
         Headings = RawData.shift();
 
-        if (typeof PreferencesData.StackedArea !== 'undefined') {
+        if (PreferencesData && typeof PreferencesData.StackedArea !== 'undefined') {
             PreferencesData = PreferencesData.StackedArea;
         }
         else {

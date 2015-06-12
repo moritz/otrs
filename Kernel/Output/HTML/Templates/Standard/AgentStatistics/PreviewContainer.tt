@@ -6,40 +6,78 @@
 # did not receive this file, see http://www.gnu.org/licenses/agpl.txt.
 # --
 
+[% SET PreviewFormats = Data.Format.grep('Print|D3') %]
+[% SET ChartTypes = {
+'D3::MultiBarChart'    => 'Bar',
+'D3::MultiLineChart'   => 'Line',
+'D3::StackedAreaChart' => 'StackedArea',
+} %]
+
 <div class="Preview">
-[% IF !Data.PreviewResult %]
+[% IF !Data.PreviewResult || !PreviewFormats.size %]
     <p>[% Translate('This statistic does not provide preview data.') | html %]</p>
 [% ELSE %]
-[% WRAPPER JSOnDocumentComplete %]
-<script type="text/javascript">//<![CDATA[
-var RawData = [% JSON(Data.PreviewResult) %],
-    ChartType = "Line";
-
-Core.UI.AdvancedChart.Init(ChartType, RawData, 'svg.PreviewCanvas', { HideLegend: true });
-//]]></script>
-[% END %]
-    <svg class="PreviewCanvas" id="PreviewCanvas"></svg>
-    <div class="PreviewTable" style="display: none;">
-
-        [% SET Title = Data.PreviewResult.shift %]
+    [% FOREACH Format IN PreviewFormats %]
+        [% IF Format == 'Print' %]
+    <div class="PreviewContent PreviewTable" id="PreviewContent[% Format %]" style="display: none;">
+        [% SET HeaderRow = Data.PreviewResult.1 %]
         <table class="DataTable">
             <thead>
-                <tr>
-                    [% SET HeaderRow = Data.PreviewResult.shift %]
-                    [% FOREACH HeaderCell IN HeaderRow %]
-                    <th>[% HeaderCell | html %]</th>
-                    [% END %]
-                </tr>
+                <tr>[% FOREACH HeaderCell IN HeaderRow %]<th>[% HeaderCell | html %]</th>[% END %]</tr>
             </thead>
             <tbody>
-                [% FOREACH DataRow IN Data.PreviewResult %]
-                <tr>
-                        [% FOREACH DataCell IN DataRow %]<td>[% DataCell | html %]</td>[% END %]
-                </tr>
+                [% SET DataRowMaxIndex = Data.PreviewResult.max %]
+                [% FOREACH DataRowIndex = [ 2 .. DataRowMaxIndex ] %]
+                    [% SET DataRow = Data.PreviewResult.$DataRowIndex %]
+                <tr>[% FOREACH DataCell IN DataRow %]<td>[% DataCell | html %]</td>[% END %]</tr>
                 [% END %]
             </tbody>
         </table>
-
     </div>
+        [% ELSE %]
+            [% SET ChartType = ChartTypes.item(Format) %]
+    <svg class="PreviewContent PreviewCanvas" id="PreviewContent[% ChartType %]" style="display: none;"></svg>
+        [% END %]
+    [% END %]
 [% END %]
+
 </div>
+
+[% IF Data.PreviewResult && PreviewFormats.size %]
+
+<select class="SwitchView">
+    [% FOREACH Format IN PreviewFormats %]
+    <option value="[% ChartTypes.item(Format) || Format %]" data-format="[% Format %]">[% Format %]</option>
+    [% END %]
+</select>
+[% WRAPPER JSOnDocumentComplete %]
+<script type="text/javascript">
+$('.SwitchView').on('change', function() {
+    var Type = $(this).val(),
+        Format = $(this).find('option:selected').data('format'),
+        RawData = [% JSON(Data.PreviewResult) %];
+    $('.PreviewContent:visible').hide();
+    $('svg.PreviewContent').empty();
+    $('#PreviewContent' + Type).show();
+    if (Format.match(/D3/)) {
+        Core.UI.AdvancedChart.Init(Type, RawData, 'svg#PreviewContent' + Type, { HideLegend: true });
+    }
+    return;
+});
+$('.SwitchView').trigger('change');
+</script>
+[% END %]
+
+<!--
+<span class="SwitchView">
+    [% FOREACH Format IN PreviewFormats %]
+        [% IF Format == 'Print' %]
+    <i class="fa fa-table" style="display: none"></i>
+        [% ELSE %]
+    <i class="fa fa-bar-chart" style="display: none"></i>
+        [% END %]
+    [% END %]
+</span>
+-->
+
+[% END %]

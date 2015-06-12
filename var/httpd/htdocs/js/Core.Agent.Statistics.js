@@ -66,20 +66,8 @@ Core.Agent.Statistics = (function (TargetNS) {
      */
     TargetNS.InitEditScreen = function () {
 
-        $('.SwitchView .fa').on('click', function() {
-            if ($(this).hasClass('SwitchViewTable')) {
-                $('.PreviewCanvas').fadeOut();
-                $('.PreviewTable').fadeIn();
-                $(this).fadeOut();
-                $(this).parent().find('.SwitchViewGraph').fadeIn();
-            }
-            else {
-                $('.PreviewTable').fadeOut();
-                $('.PreviewCanvas').fadeIn();
-                $(this).fadeOut();
-                $(this).parent().find('.SwitchViewTable').fadeIn();
-            }
-        });
+        //$('.SwitchView .fa:first').show();
+
     };
 
 

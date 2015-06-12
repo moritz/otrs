@@ -44,10 +44,6 @@
 
                     [% Data.PreviewContainer %]
 
-                    <span class="SwitchView">
-                        <i class="fa fa-table SwitchViewTable"></i>
-                        <i class="fa fa-bar-chart SwitchViewGraph" style="display: none;"></i>
-                    </span>
                     <button class="CallForAction EditXAxis Bottom"><span>Edit X-Axis</span></button>
                     <button class="CallForAction EditYAxis Left"><span>Edit Y-Axis</span></button>
                     <button class="CallForAction EditRestrictions Right"><span>Edit Restrictions</span></button>
