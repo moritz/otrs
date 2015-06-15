@@ -6,10 +6,15 @@
 # did not receive this file, see http://www.gnu.org/licenses/agpl.txt.
 # --
 
+[% SET ChartTypes = {
+'D3::MultiBarChart'    => 'Bar',
+'D3::MultiLineChart'   => 'Line',
+'D3::StackedAreaChart' => 'StackedArea',
+} %]
 <table border="0" width="100%" cellspacing="0" cellpadding="3">
     <tr>
         <td class="contenthead">
-            [% Env("Box0") %][% Translate("Print") | html %]: [% Translate(Config("Stats::StatsHook")) | html %] [% Data.StatNumber | html %][% Env("Box1") %]
+            [% Translate("Print") | html %]: [% Translate(Config("Stats::StatsHook")) | html %] [% Data.StatNumber | html %]
         </td>
     </tr>
     <tr>
@@ -22,18 +27,13 @@
                 </tr>
                 <tr>
                     <td colspan="2">
-                        <table border="0" width="100%" cellspacing="0" cellpadding="3">
-                            <thead>
-                                <tr>
-                                    [% FOREACH HeaderCell IN Data.HeaderRow %]<td>[% HeaderCell | html %]</td>[% END %]
-                                </tr>
-                            </thead>
-                            <tbody>
-                                [% FOREACH DataRow IN Data.DataRows %]
-                                <tr>[% FOREACH DataCell IN DataRow %]<td>2[% DataCell | html %]</td>[% END %]</tr>
-                                [% END %]
-                            </tbody>
-                        </table>
+                        <svg class="" id="ChartContent"></svg>
+[% WRAPPER JSOnDocumentComplete %]
+<script type="text/javascript">
+console.log([% JSON(Data.RawData) %]);
+    Core.UI.AdvancedChart.Init([% ChartTypes.item(Data.Format) | JSON %], [% JSON(Data.RawData) %], 'svg#ChartContent', { HideLegend: true });
+</script>
+[% END %]
                     </td>
                 </tr>
             </table>

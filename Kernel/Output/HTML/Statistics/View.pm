@@ -644,6 +644,24 @@ sub RenderStatisticsResultData {
     # get CSV object
     my $CSVObject = $Kernel::OM->Get('Kernel::System::CSV');
 
+    # generate D3 output
+    if ( $Param{Format} =~ m{^D3} ) {
+        my $Output = $LayoutObject->Header( Value => $Title );
+        $Output .= $LayoutObject->Output(
+            Data => {
+                %{$Stat},
+                RawData => [
+                    [$Title],
+                    $HeadArrayRef,
+                    @StatArray,
+                ],
+                %Param,
+            },
+            TemplateFile => 'AgentStatistics/RenderStatisticsResultData/D3',
+        );
+        $Output .= $LayoutObject->Footer();
+        return $Output;
+    }
     # generate csv output
     if ( $Param{Format} eq 'CSV' ) {
 
