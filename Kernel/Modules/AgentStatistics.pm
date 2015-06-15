@@ -796,247 +796,18 @@ sub RunAction {
         @StatArray = @NewStatArray;
     }
 
-    # presentation
-    my $TitleArrayRef = shift @StatArray;
-    my $Title         = $TitleArrayRef->[0];
-    my $HeadArrayRef  = shift @StatArray;
-
-    # if array = empty
-    if ( !@StatArray ) {
-        push @StatArray, [ ' ', 0 ];
-    }
-
-    # Generate Filename
-    my $Filename = $Self->{StatsObject}->StringAndTimestamp2Filename(
-        String => $Stat->{Title} . ' Created',
+    $Kernel::OM->ObjectParamAdd(
+        'Kernel::Output::HTML::Statistics::View' => {
+            StatsObject => $Self->{StatsObject},
+        },
+    );
+    return $Kernel::OM->Get('Kernel::Output::HTML::Statistics::View')->RenderStatisticsResultData(
+        StatArray => \@StatArray,
+        Stat      => $Stat,
+        %Param
     );
 
-    # Translate the column and row description
-    $Self->_ColumnAndRowTranslation(
-        StatArrayRef => \@StatArray,
-        HeadArrayRef => $HeadArrayRef,
-        StatRef      => $Stat,
-        ExchangeAxis => $Param{ExchangeAxis},
-    );
-    my $Output;
-
-    # get CSV object
-    my $CSVObject = $Kernel::OM->Get('Kernel::System::CSV');
-
-    # generate csv output
-    if ( $Param{Format} eq 'CSV' ) {
-
-        # get Separator from language file
-        my $UserCSVSeparator = $LayoutObject->{LanguageObject}->{Separator};
-
-        if ( $ConfigObject->Get('PreferencesGroups')->{CSVSeparator}->{Active} ) {
-            my %UserData = $$Kernel::OM->Get('Kernel::System::User')->GetUserData( UserID => $Self->{UserID} );
-            $UserCSVSeparator = $UserData{UserCSVSeparator} if $UserData{UserCSVSeparator};
-        }
-        $Output .= $CSVObject->Array2CSV(
-            Head      => $HeadArrayRef,
-            Data      => \@StatArray,
-            Separator => $UserCSVSeparator,
-        );
-
-        return $LayoutObject->Attachment(
-            Filename    => $Filename . '.csv',
-            ContentType => "text/csv",
-            Content     => $Output,
-        );
-    }
-
-    # generate excel output
-    elsif ( $Param{Format} eq 'Excel' ) {
-        $Output .= $CSVObject->Array2CSV(
-            Head   => $HeadArrayRef,
-            Data   => \@StatArray,
-            Format => 'Excel',
-        );
-
-        return $LayoutObject->Attachment(
-            Filename    => $Filename . '.xlsx',
-            ContentType => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            Content     => $Output,
-        );
-
-    }
-
-    # pdf or html output
-    elsif ( $Param{Format} eq 'Print' ) {
-        $Kernel::OM->Get('Kernel::System::Main')->Require('Kernel::System::PDF');
-
-        # get PDF object
-        my $PDFObject;
-
-        if ( $ConfigObject->Get('PDF') ) {
-            $PDFObject = $Kernel::OM->Get('Kernel::System::PDF');
-        }
-
-        # PDF Output
-        if ($PDFObject) {
-            my $PrintedBy = $LayoutObject->{LanguageObject}->Translate('printed by');
-            my $Page      = $LayoutObject->{LanguageObject}->Translate('Page');
-            my $Time      = $LayoutObject->{Time};
-            my $Url       = ' ';
-            if ( $ENV{REQUEST_URI} ) {
-                $Url = $ConfigObject->Get('HttpType') . '://'
-                    . $ConfigObject->Get('FQDN')
-                    . $ENV{REQUEST_URI};
-            }
-
-            # get maximum number of pages
-            my $MaxPages = $ConfigObject->Get('PDF::MaxPages');
-            if ( !$MaxPages || $MaxPages < 1 || $MaxPages > 1000 ) {
-                $MaxPages = 100;
-            }
-
-            # create the header
-            my $CellData;
-            my $CounterRow  = 0;
-            my $CounterHead = 0;
-            for my $Content ( @{$HeadArrayRef} ) {
-                $CellData->[$CounterRow]->[$CounterHead]->{Content} = $Content;
-                $CellData->[$CounterRow]->[$CounterHead]->{Font}    = 'ProportionalBold';
-                $CounterHead++;
-            }
-            if ( $CounterHead > 0 ) {
-                $CounterRow++;
-            }
-
-            # create the content array
-            for my $Row (@StatArray) {
-                my $CounterColumn = 0;
-                for my $Content ( @{$Row} ) {
-                    $CellData->[$CounterRow]->[$CounterColumn]->{Content} = $Content;
-                    $CounterColumn++;
-                }
-                $CounterRow++;
-            }
-
-            # output 'No matches found', if no content was given
-            if ( !$CellData->[0]->[0] ) {
-                $CellData->[0]->[0]->{Content} = $LayoutObject->{LanguageObject}->Translate('No matches found.');
-            }
-
-            # page params
-            my %User = $Kernel::OM->Get('Kernel::System::User')->GetUserData( UserID => $Self->{UserID} );
-            my %PageParam;
-            $PageParam{PageOrientation} = 'landscape';
-            $PageParam{MarginTop}       = 30;
-            $PageParam{MarginRight}     = 40;
-            $PageParam{MarginBottom}    = 40;
-            $PageParam{MarginLeft}      = 40;
-            $PageParam{HeaderRight}     = $ConfigObject->Get('Stats::StatsHook') . $Stat->{StatNumber};
-            $PageParam{FooterLeft}      = $Url;
-            $PageParam{HeadlineLeft}    = $Title;
-            $PageParam{HeadlineRight}   = $PrintedBy . ' '
-                . $User{UserFirstname} . ' '
-                . $User{UserLastname} . ' ('
-                . $User{UserEmail} . ') '
-                . $Time;
-
-            # table params
-            my %TableParam;
-            $TableParam{CellData}            = $CellData;
-            $TableParam{Type}                = 'Cut';
-            $TableParam{FontSize}            = 6;
-            $TableParam{Border}              = 0;
-            $TableParam{BackgroundColorEven} = '#AAAAAA';
-            $TableParam{BackgroundColorOdd}  = '#DDDDDD';
-            $TableParam{Padding}             = 1;
-            $TableParam{PaddingTop}          = 3;
-            $TableParam{PaddingBottom}       = 3;
-
-            # create new pdf document
-            $PDFObject->DocumentNew(
-                Title  => $ConfigObject->Get('Product') . ': ' . $Title,
-                Encode => $LayoutObject->{UserCharset},
-            );
-
-            # start table output
-            $PDFObject->PageNew(
-                %PageParam,
-                FooterRight => $Page . ' 1',
-            );
-            COUNT:
-            for ( 2 .. $MaxPages ) {
-
-                # output table (or a fragment of it)
-                %TableParam = $PDFObject->Table( %TableParam, );
-
-                # stop output or output next page
-                last COUNT if $TableParam{State};
-
-                $PDFObject->PageNew(
-                    %PageParam,
-                    FooterRight => $Page . ' ' . $_,
-                );
-            }
-
-            # return the pdf document
-            my $PDFString = $PDFObject->DocumentOutput();
-            return $LayoutObject->Attachment(
-                Filename    => $Filename . '.pdf',
-                ContentType => 'application/pdf',
-                Content     => $PDFString,
-                Type        => 'inline',
-            );
-        }
-
-        # HTML Output
-        else {
-            $Stat->{Table} = $Self->_OutputHTMLTable(
-                Head => $HeadArrayRef,
-                Data => \@StatArray,
-            );
-
-            $Stat->{Title} = $Title;
-
-            # presentation
-            my $Output = $LayoutObject->PrintHeader( Value => $Title );
-            $Output .= $LayoutObject->Output(
-                Data         => $Stat,
-                TemplateFile => 'AgentStatisticsPrint',
-            );
-            $Output .= $LayoutObject->PrintFooter();
-            return $Output;
-        }
-    }
-
-    # graph
-    elsif ( $Param{Format} =~ m{^GD::Graph\.*}x ) {
-
-        # make graph
-        my $Ext   = 'png';
-        my $Graph = $Self->{StatsObject}->GenerateGraph(
-            Array        => \@StatArray,
-            HeadArrayRef => $HeadArrayRef,
-            Title        => $Title,
-            Format       => $Param{Format},
-            GraphSize    => $Param{GraphSize},
-        );
-
-        # error messages if there is no graph
-        if ( !$Graph ) {
-            if ( $Param{Format} =~ m{^GD::Graph::pie}x ) {
-                return $LayoutObject->ErrorScreen(
-                    Message => 'You use invalid data! Perhaps there are no results.',
-                );
-            }
-            return $LayoutObject->ErrorScreen(
-                Message => "Too much data, can't use it with graph!",
-            );
-        }
-
-        # return image to browser
-        return $LayoutObject->Attachment(
-            Filename    => $Filename . '.' . $Ext,
-            ContentType => "image/$Ext",
-            Content     => $Graph,
-            Type        => 'attachment',             # not inline because of bug# 2757
-        );
-    }
+    return
 }
 
 sub GeneralSpecificationsWidgetAJAX {
@@ -1368,6 +1139,29 @@ sub _ColumnAndRowTranslation {
     }
 
     return 1;
+}
+
+# ATTENTION: this function delivers only approximations!!!
+sub _TimeInSeconds {
+    my ( $Self, %Param ) = @_;
+
+    # check if need params are available
+    if ( !$Param{TimeUnit} ) {
+        return $Kernel::OM->Get('Kernel::Output::HTML::Layout')
+            ->ErrorScreen( Message => '_TimeInSeconds: Need TimeUnit!' );
+    }
+
+    my %TimeInSeconds = (
+        Year   => 31536000,    # 60 * 60 * 60 * 365
+        Month  => 2592000,     # 60 * 60 * 24 * 30
+        Week   => 604800,      # 60 * 60 * 24 * 7
+        Day    => 86400,       # 60 * 60 * 24
+        Hour   => 3600,        # 60 * 60
+        Minute => 60,
+        Second => 1,
+    );
+
+    return $TimeInSeconds{ $Param{TimeUnit} };
 }
 
 1;
