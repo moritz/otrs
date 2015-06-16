@@ -32,14 +32,20 @@
     </div>
     <div class="Clear"></div>
 
+[% IF Data.StatType %]
+    <input type="hidden"
+    name="[% IF Data.StatType == 'Static' %]File[% ELSE %]Object[% END %]"
+    value="[% IF Data.StatType == 'Static' %][% Data.File | html %][% ELSE %][% Data.Object | html %][% END %]" />
+[% ELSE %]
     <label class="Mandatory" for="Description">
         <span class="Marker">*</span>
         [% Translate("Object type") | html %]:
     </label>
     <div class="Value">
-        <span id="ObjectType">...</span>
+        [% Data.SelectObjectType %]
     </div>
     <div class="Clear"></div>
+[% END %]
 
     <label class="Mandatory" for="Permission">
         <span class="Marker">*</span>

@@ -31,27 +31,33 @@
             </div>
             <div class="Content">
                 <ul class="BigButtons">
+                    [% IF Data.ShowAddDynamicMatrixButton %]
                     <li>
-                        <a href="">
+                        <a href="#" data-statistic-preselection="DynamicMatrix">
                             <i class="fa fa-table"></i>
                             <strong>Dynamic Matrix</strong>
                             <span>Explanation Text which goes over 2 lines</span>
                         </a>
                     </li>
+                    [% END %]
+                    [% IF Data.ShowAddDynamicListButton %]
                     <li>
-                        <a href="">
+                        <a href="#" data-statistic-preselection="DynamicList">
                             <i class="fa fa-list"></i>
                             <strong>Dynamic List</strong>
                             <span>Explanation Text which goes over 2 lines</span>
                         </a>
                     </li>
+                    [% END %]
+                    [% IF Data.ShowAddStaticButton %]
                     <li>
-                        <a href="">
+                        <a href="#" data-statistic-preselection="Static">
                             <i class="fa fa-code"></i>
                             <strong>Static</strong>
                             <span>Explanation Text which goes over 2 lines</span>
                         </a>
                     </li>
+                    [% END %]
                 </ul>
             </div>
         </div>
@@ -61,6 +67,25 @@
                 <h2>[% Translate("General Specification") | html %]</h2>
             </div>
             <div class="Content Center"></div>
+        </div>
+
+        <div class="WidgetSimple" id="SaveWidget" style="display: none;">
+            <div class="Header">
+                <h2>[% Translate("Create Statistic") | html %]</h2>
+            </div>
+            <div class="Content">
+                <fieldset class="TableLike">
+                    <div class="Field SpacingTop">
+                        <button class="Primary CallForAction" type="submit" value="[% Translate("Save") | html %]">
+                            <span>[% Translate("Save") | html %]</span>
+                        </button>
+                        [% Translate('or') | html %]
+                        <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=Overview">
+                            [% Translate('Cancel') | html %]
+                        </a>
+                    </div>
+                </fieldset>
+            </div>
         </div>
     </div>
 </div>

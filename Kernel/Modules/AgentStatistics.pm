@@ -422,7 +422,29 @@ sub AddScreen {
     }
 
     my %Frontend;
-    $Frontend{GeneralSpecificationsWidget} = $Self->_GeneralSpecificationsWidget();
+
+    my $DynamicFiles = $Self->{StatsObject}->GetDynamicFiles();
+    DYNAMIC_FILE:
+    for my $DynamicFile ( sort keys %{ $DynamicFiles // {} } ) {
+        my $ObjectName = 'Kernel::System::Stats::Dynamic::' . $DynamicFile;
+
+        next DYNAMIC_FILE if !$Kernel::OM->Get('Kernel::System::Main')->Require($ObjectName);
+        my $Object = $ObjectName->new();
+        next DYNAMIC_FILE if !$Object;
+        if ( $Object->can('GetStatElement') ) {
+            $Frontend{ShowAddDynamicMatrixButton}++;
+        }
+        else {
+            $Frontend{ShowAddDynamicListButton}++;
+        }
+    }
+
+    my $StaticFiles = $Self->{StatsObject}->GetStaticFiles(
+        OnlyUnusedFiles => 1,
+    );
+    if ( scalar keys %{$StaticFiles} ) {
+        $Frontend{ShowAddStaticButton}++;
+    }
 
     # build output
     my $Output = $LayoutObject->Header( Title => 'Add New Statistic' );
@@ -874,6 +896,66 @@ sub _GeneralSpecificationsWidget {
         SelectedID => $Stat->{Valid},
         Name       => 'Valid',
     );
+
+    # Create a new statistic
+    if ( !$Stat->{StatType} ) {
+        my $DynamicFiles = $Self->{StatsObject}->GetDynamicFiles();
+
+        my ( %DynamicMatrixFiles, %DynamicTableFiles );
+        DYNAMIC_FILE:
+        for my $DynamicFile ( sort keys %{ $DynamicFiles // {} } ) {
+            my $ObjectName = 'Kernel::System::Stats::Dynamic::' . $DynamicFile;
+
+            next DYNAMIC_FILE if !$Kernel::OM->Get('Kernel::System::Main')->Require($ObjectName);
+            my $Object = $ObjectName->new();
+            next DYNAMIC_FILE if !$Object;
+            if ( $Object->can('GetStatElement') ) {
+                $DynamicMatrixFiles{$DynamicFile} = $DynamicFiles->{$DynamicFile};
+            }
+            else {
+                $DynamicTableFiles{$DynamicFile} = $DynamicFiles->{$DynamicFile};
+            }
+        }
+
+        my $StaticFiles = $Self->{StatsObject}->GetStaticFiles(
+            OnlyUnusedFiles => 1,
+        );
+        my @DynamicFilesArray = keys %{$DynamicFiles};
+
+        my $StatisticPreselection = $ParamObject->GetParam( Param => 'StatisticPreselection' );
+
+        if ( $StatisticPreselection eq 'Static' ) {
+            $Frontend{SelectObjectType} = $LayoutObject->BuildSelection(
+                Data        => $StaticFiles,
+                Name        => 'File',
+                Class       => 'Validate_Required',
+                Translation => 0,
+            );
+        }
+        elsif ( $StatisticPreselection eq 'DynamicList' ) {
+            $Frontend{SelectObjectType} = $LayoutObject->BuildSelection(
+                Data        => \%DynamicTableFiles,
+                Name        => 'Object',
+                Translation => 1,
+                SelectedID  => $ConfigObject->Get('Stats::DefaultSelectedDynamicObject'),
+            );
+        }
+
+        # DynamicMatrix
+        else {
+            $Frontend{SelectObjectType} = $LayoutObject->BuildSelection(
+                Data        => \%DynamicMatrixFiles,
+                Name        => 'Object',
+                Translation => 1,
+                SelectedID  => $ConfigObject->Get('Stats::DefaultSelectedDynamicObject'),
+            );
+
+        }
+
+        #use Data::Dumper;
+        #print STDERR Dumper(\$Frontend{SelectObjectType});
+
+    }
 
     # create multiselectboxes 'permission'
     my %Permission = (

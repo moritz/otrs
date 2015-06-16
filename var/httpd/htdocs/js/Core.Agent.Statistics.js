@@ -32,6 +32,7 @@ Core.Agent.Statistics = (function (TargetNS) {
     TargetNS.InitAddScreen = function () {
 
         $('.BigButtons li a').bind('click', function () {
+            var $Link = $(this);
 
             $('.BigButtons li a').removeClass('Active');
             $(this).addClass('Active');
@@ -39,15 +40,17 @@ Core.Agent.Statistics = (function (TargetNS) {
             $('#GeneralSpecifications').fadeIn(function() {
 
                 $('#GeneralSpecifications .Content').addClass('Center').html('<span class="AJAXLoader"></span>');
+                $('#SaveWidget').hide();
 
                 var URL = Core.Config.Get('Baselink'),
                 Data = {
                     Action: 'AgentStatistics',
-                    Subaction: 'GeneralSpecificationsWidgetAJAX'
+                    Subaction: 'GeneralSpecificationsWidgetAJAX',
+                    StatisticPreselection: $Link.data('statistic-preselection')
                 };
-
                 Core.AJAX.FunctionCall(URL, Data, function(Response) {
                     $('#GeneralSpecifications .Content').removeClass('Center').html(Response);
+                    $('#SaveWidget').show();
                 }, 'html');
             });
 
