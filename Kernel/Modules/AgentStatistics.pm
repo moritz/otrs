@@ -66,6 +66,9 @@ sub Run {
     elsif ( $Self->{Subaction} eq 'Add' ) {
         return $Self->AddScreen();
     }
+    elsif ( $Self->{Subaction} eq 'AddAction' ) {
+        return $Self->AddAction();
+    }
     elsif ( $Self->{Subaction} eq 'Import' ) {
         return $Self->ImportScreen();
     }
@@ -421,6 +424,8 @@ sub AddScreen {
         return $LayoutObject->NoPermission( WithHeader => 'yes' );
     }
 
+    my %Errors = %{ $Param{Errors} // {} };
+
     my %Frontend;
 
     my $DynamicFiles = $Self->{StatsObject}->GetDynamicFiles();
@@ -446,6 +451,19 @@ sub AddScreen {
         $Frontend{ShowAddStaticButton}++;
     }
 
+    # This is a page reload because of validation errors
+    if (%Errors) {
+        $Kernel::OM->ObjectParamAdd(
+            'Kernel::Output::HTML::Statistics::View' => {
+                StatsObject => $Self->{StatsObject},
+            },
+        );
+        $Frontend{GeneralSpecificationsWidget} = $Self->_GeneralSpecificationsWidget(
+            Errors => \%Errors,
+        );
+        $Frontend{ShowFormInitially} = 1;
+    }
+
     # build output
     my $Output = $LayoutObject->Header( Title => 'Add New Statistic' );
     $Output .= $LayoutObject->NavigationBar();
@@ -453,10 +471,90 @@ sub AddScreen {
         TemplateFile => 'AgentStatisticsAdd',
         Data         => {
             %Frontend,
+            %Errors,
         },
     );
     $Output .= $LayoutObject->Footer();
     return $Output;
+}
+
+sub AddAction {
+    my ( $Self, %Param ) = @_;
+
+    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+    my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
+    my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
+
+    my %Errors;
+
+    my %Data;
+    for my $Key (qw(Title Description ObjectModule StatType Valid)) {
+        $Data{$Key} = $ParamObject->GetParam( Param => $Key ) // '';
+        if ( !$Data{$Key} ) {
+            $Errors{ $Key . 'ServerError' } = 'ServerError';
+        }
+    }
+
+    # This seems to be historical metadata that is needed for display.
+    my $Object = $Data{ObjectModule};
+    $Object = [ split( m{::}, $Object ) ]->[-1];
+    if ( $Data{StatType} eq 'static' ) {
+        $Data{File} = $Object;
+    }
+    else {
+        $Data{Object} = $Object;
+    }
+
+    for my $Key (qw(SumRow SumCol Cache ShowAsDashboardWidget)) {
+        $Data{$Key} = $ParamObject->GetParam( Param => $Key ) // '';
+    }
+
+    for my $Key (qw(Permission Format)) {
+        $Data{$Key} = [ $ParamObject->GetArray( Param => $Key ) ];
+        if ( !@{ $Data{$Key} } ) {
+            $Errors{ $Key . 'ServerError' } = 'ServerError';
+
+            #$Data{$Key} = '';
+        }
+    }
+
+    for my $Key (qw(GraphSize)) {
+        $Data{$Key} = [ $ParamObject->GetArray( Param => $Key ) ];
+
+        #if ( !@{ $Data{$Key} } ) {
+        #    $Data{$Key} = '';
+        #}
+    }
+
+    my @Notify = $Self->{StatsObject}->CompletenessCheck(
+        StatData => \%Data,
+        Section  => 'Specification'
+    );
+    if ( %Errors || @Notify ) {
+        return $Self->AddScreen( Errors => \%Errors );
+    }
+
+    $Param{StatID} = $Self->{StatsObject}->StatsAdd();
+    if ( !$Param{StatID} ) {
+        return $LayoutObject->ErrorScreen( Message => 'Add: Get no StatID!' );
+    }
+    $Self->{StatsObject}->StatsUpdate(
+        StatID => $Param{StatID},
+        Hash   => \%Data,
+    );
+
+    # For static stats, the configuration is finished
+    if ( $Data{StatType} eq 'static' ) {
+        return $LayoutObject->Redirect(
+            OP => "Action=AgentStatistics;Subaction=View;StatID=$Param{StatID}",
+        );
+    }
+
+    # Continue configuration for dynamic stats
+    return $LayoutObject->Redirect(
+        OP => "Action=AgentStatistics;Subaction=Edit;StatID=$Param{StatID}",
+    );
+
 }
 
 sub RunAction {
@@ -852,12 +950,14 @@ sub _GeneralSpecificationsWidget {
     my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
     my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
 
+    my %Errors = %{ $Param{Errors} // {} };
+
     my $Stat;
     if ( $Param{StatID} ) {
         $Stat = $Self->{StatsObject}->StatsGet( StatID => $Param{StatID} );
     }
     else {
-        $Stat->{StatID}     = 'new';
+        $Stat->{StatID}     = '';
         $Stat->{StatNumber} = '';
         $Stat->{Valid}      = 1;
     }
@@ -878,7 +978,7 @@ sub _GeneralSpecificationsWidget {
 
     # If this is a new stat, assume that it does not support the dashboard widget at the start.
     #   This is corrected by a call to AJAXUpdate when the page loads and when the user makes changes.
-    if ( $Stat->{StatID} eq 'new' || !$Stat->{ObjectBehaviours}->{ProvidesDashboardWidget} ) {
+    if ( !$Stat->{StatID} || !$Stat->{ObjectBehaviours}->{ProvidesDashboardWidget} ) {
         $Frontend{'SelectShowAsDashboardWidget'} = $LayoutObject->BuildSelection(
             Data => {
                 0 => 'No (not supported)',
@@ -901,7 +1001,7 @@ sub _GeneralSpecificationsWidget {
     if ( !$Stat->{StatType} ) {
         my $DynamicFiles = $Self->{StatsObject}->GetDynamicFiles();
 
-        my ( %DynamicMatrixFiles, %DynamicTableFiles );
+        my %ObjectModules;
         DYNAMIC_FILE:
         for my $DynamicFile ( sort keys %{ $DynamicFiles // {} } ) {
             my $ObjectName = 'Kernel::System::Stats::Dynamic::' . $DynamicFile;
@@ -910,43 +1010,50 @@ sub _GeneralSpecificationsWidget {
             my $Object = $ObjectName->new();
             next DYNAMIC_FILE if !$Object;
             if ( $Object->can('GetStatElement') ) {
-                $DynamicMatrixFiles{$DynamicFile} = $DynamicFiles->{$DynamicFile};
+                $ObjectModules{DynamicMatrix}->{$ObjectName} = $DynamicFiles->{$DynamicFile};
             }
             else {
-                $DynamicTableFiles{$DynamicFile} = $DynamicFiles->{$DynamicFile};
+                $ObjectModules{DynamicList}->{$ObjectName} = $DynamicFiles->{$DynamicFile};
             }
         }
 
         my $StaticFiles = $Self->{StatsObject}->GetStaticFiles(
             OnlyUnusedFiles => 1,
         );
-        my @DynamicFilesArray = keys %{$DynamicFiles};
+        for my $StaticFile ( sort keys %{ $StaticFiles // {} } ) {
+            $ObjectModules{Static}->{ 'Kernel::System::Stats::Static::' . $StaticFile } = $StaticFiles->{$StaticFile};
+        }
 
         my $StatisticPreselection = $ParamObject->GetParam( Param => 'StatisticPreselection' );
 
         if ( $StatisticPreselection eq 'Static' ) {
+            $Frontend{StatType}         = 'static';
             $Frontend{SelectObjectType} = $LayoutObject->BuildSelection(
-                Data        => $StaticFiles,
-                Name        => 'File',
-                Class       => 'Validate_Required',
+                Data        => $ObjectModules{Static},
+                Name        => 'ObjectModule',
+                Class       => 'Validate_Required' . ( $Errors{ObjectModuleServerError} ? ' ServerError' : '' ),
                 Translation => 0,
             );
         }
         elsif ( $StatisticPreselection eq 'DynamicList' ) {
+            $Frontend{StatType}         = 'dynamic';
             $Frontend{SelectObjectType} = $LayoutObject->BuildSelection(
-                Data        => \%DynamicTableFiles,
-                Name        => 'Object',
+                Data        => $ObjectModules{DynamicList},
+                Name        => 'ObjectModule',
                 Translation => 1,
+                Class       => ( $Errors{ObjectModuleServerError} ? ' ServerError' : '' ),
                 SelectedID  => $ConfigObject->Get('Stats::DefaultSelectedDynamicObject'),
             );
         }
 
         # DynamicMatrix
         else {
+            $Frontend{StatType}         = 'dynamic';
             $Frontend{SelectObjectType} = $LayoutObject->BuildSelection(
-                Data        => \%DynamicMatrixFiles,
-                Name        => 'Object',
+                Data        => $ObjectModules{DynamicMatrix},
+                Name        => 'ObjectModule',
                 Translation => 1,
+                Class       => ( $Errors{ObjectModuleServerError} ? ' ServerError' : '' ),
                 SelectedID  => $ConfigObject->Get('Stats::DefaultSelectedDynamicObject'),
             );
 
@@ -959,9 +1066,9 @@ sub _GeneralSpecificationsWidget {
 
     # create multiselectboxes 'permission'
     my %Permission = (
-        Data        => { $Kernel::OM->Get('Kernel::System::Group')->GroupList( Valid => 1 ) },
-        Name        => 'Permission',
-        Class       => 'Validate_Required',
+        Data => { $Kernel::OM->Get('Kernel::System::Group')->GroupList( Valid => 1 ) },
+        Name => 'Permission',
+        Class => 'Validate_Required' . ( $Errors{PermissionServerError} ? ' ServerError' : '' ),
         Multiple    => 1,
         Size        => 5,
         Translation => 0,
@@ -998,7 +1105,7 @@ sub _GeneralSpecificationsWidget {
     $Stat->{SelectFormat} = $LayoutObject->BuildSelection(
         Data       => $AvailableFormats,
         Name       => 'Format',
-        Class      => 'Validate_Required',
+        Class      => 'Validate_Required' . ( $Errors{FormatServerError} ? ' ServerError' : '' ),
         Multiple   => 1,
         Size       => 5,
         SelectedID => $Stat->{Format}
@@ -1021,6 +1128,7 @@ sub _GeneralSpecificationsWidget {
         Data         => {
             %Frontend,
             %{$Stat},
+            %Errors,
         },
     );
     return $Output;

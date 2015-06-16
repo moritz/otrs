@@ -13,7 +13,7 @@
         [% Translate("Title") | html %]:
     </label>
     <div class="Value">
-        <input type="text" name="Title" id="Title" class="W90pc Validate_Required" value="[% Data.Title | html %]"/>
+        <input type="text" name="Title" id="Title" class="W90pc Validate_Required [% Data.TitleServerError | html %]" value="[% Data.Title | html %]"/>
         <div id="TitleError" class="TooltipErrorMessage">
             <p>[% Translate("This field is required.") | html %]</p>
         </div>
@@ -25,23 +25,20 @@
         [% Translate("Description") | html %]:
     </label>
     <div class="Value">
-        <textarea name="Description" id="Description" rows="4" cols="60" class="W90pc Validate_Required">[% Data.Description | html %]</textarea>
+        <textarea name="Description" id="Description" rows="4" cols="60" class="W90pc Validate_Required [% Data.DescriptionServerError | html %]">[% Data.Description | html %]</textarea>
         <div id="DescriptionError" class="TooltipErrorMessage">
             <p>[% Translate("This field is required.") | html %]</p>
         </div>
     </div>
     <div class="Clear"></div>
 
-[% IF Data.StatType %]
-    <input type="hidden"
-    name="[% IF Data.StatType == 'Static' %]File[% ELSE %]Object[% END %]"
-    value="[% IF Data.StatType == 'Static' %][% Data.File | html %][% ELSE %][% Data.Object | html %][% END %]" />
-[% ELSE %]
+[% IF !Data.StatID %]
     <label class="Mandatory" for="Description">
         <span class="Marker">*</span>
         [% Translate("Object type") | html %]:
     </label>
     <div class="Value">
+        <input type="hidden" name="StatType" value="[% Data.StatType | html %]" />
         [% Data.SelectObjectType %]
     </div>
     <div class="Clear"></div>
@@ -68,12 +65,6 @@
     </label>
     <div class="Value">
         [% Data.SelectFormat %]
-[% RenderBlockStart("PackageUnavailableMsg") %]
-        <p class="FieldExplanation">
-            [% Translate("Some result formats are disabled because at least one needed package is not installed.") | html %]
-            [% Translate("Please contact your administrator.") | html %]
-        </p>
-[% RenderBlockEnd("PackageUnavailableMsg") %]
         <div id="FormatError" class="TooltipErrorMessage">
             <p>[% Translate("This field is required.") | html %]</p>
         </div>
