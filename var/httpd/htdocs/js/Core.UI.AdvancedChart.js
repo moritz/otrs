@@ -626,7 +626,7 @@ Core.UI.AdvancedChart = (function (TargetNS) {
      *      Initializes a chart.
      */
     TargetNS.Init = function(Type, RawData, Element, Options) {
-
+        Options = Options || {};
         switch (Type) {
             case 'Bar':
                 DrawBarChart(RawData, Element, Options);

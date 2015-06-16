@@ -27,11 +27,10 @@
                 </tr>
                 <tr>
                     <td colspan="2">
-                        <svg class="" id="ChartContent"></svg>
+                        <svg class="" id="ChartContent" style="min-height: 500px"></svg>
 [% WRAPPER JSOnDocumentComplete %]
 <script type="text/javascript">
-console.log([% JSON(Data.RawData) %]);
-    Core.UI.AdvancedChart.Init([% ChartTypes.item(Data.Format) | JSON %], [% JSON(Data.RawData) %], 'svg#ChartContent', { HideLegend: true });
+    Core.UI.AdvancedChart.Init([% ChartTypes.item(Data.Format) | JSON %], [% JSON(Data.RawData) %], 'svg#ChartContent');
 </script>
 [% END %]
                     </td>
