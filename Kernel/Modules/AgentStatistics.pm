@@ -323,7 +323,7 @@ sub EditScreen {
     my $Stat = $Self->{StatsObject}->StatsGet( StatID => $Param{StatID} );
 
     my %Frontend;
-    $Frontend{GeneralSpecificationsWidget} = $Self->_GeneralSpecificationsWidget(
+    $Frontend{GeneralSpecificationsWidget} = $Self->{StatsViewObject}->GeneralSpecificationsWidget(
         StatID => $Stat->{StatID},
     );
 
@@ -435,7 +435,7 @@ sub AddScreen {
 
     # This is a page reload because of validation errors
     if (%Errors) {
-        $Frontend{GeneralSpecificationsWidget} = $Self->_GeneralSpecificationsWidget(
+        $Frontend{GeneralSpecificationsWidget} = $Self->{StatsViewObject}->GeneralSpecificationsWidget(
             Errors => \%Errors,
         );
         $Frontend{ShowFormInitially} = 1;
@@ -906,201 +906,10 @@ sub GeneralSpecificationsWidgetAJAX {
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
     return $LayoutObject->Attachment(
         ContentType => 'text/html',
-        Content     => $Self->_GeneralSpecificationsWidget(),
+        Content     => $Self->{StatsViewObject}->GeneralSpecificationsWidget(),
         Type        => 'inline',
         NoCache     => 1,
     );
-}
-
-sub _GeneralSpecificationsWidget {
-    my ( $Self, %Param ) = @_;
-
-    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
-    my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
-    my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
-
-    my %Errors = %{ $Param{Errors} // {} };
-
-    my $Stat;
-    if ( $Param{StatID} ) {
-        $Stat = $Self->{StatsObject}->StatsGet( StatID => $Param{StatID} );
-    }
-    else {
-        $Stat->{StatID}     = '';
-        $Stat->{StatNumber} = '';
-        $Stat->{Valid}      = 1;
-    }
-
-    my %Frontend;
-
-    # create selectboxes 'Cache', 'SumRow', 'SumCol', and 'Valid'
-    for my $Key (qw(Cache ShowAsDashboardWidget SumRow SumCol)) {
-        $Frontend{ 'Select' . $Key } = $LayoutObject->BuildSelection(
-            Data => {
-                0 => 'No',
-                1 => 'Yes'
-            },
-            SelectedID => $Stat->{$Key} || 0,
-            Name => $Key,
-        );
-    }
-
-    # If this is a new stat, assume that it does not support the dashboard widget at the start.
-    #   This is corrected by a call to AJAXUpdate when the page loads and when the user makes changes.
-    if ( !$Stat->{StatID} || !$Stat->{ObjectBehaviours}->{ProvidesDashboardWidget} ) {
-        $Frontend{'SelectShowAsDashboardWidget'} = $LayoutObject->BuildSelection(
-            Data => {
-                0 => 'No (not supported)',
-            },
-            SelectedID => 0,
-            Name       => 'ShowAsDashboardWidget',
-        );
-    }
-
-    $Frontend{SelectValid} = $LayoutObject->BuildSelection(
-        Data => {
-            0 => 'invalid',
-            1 => 'valid',
-        },
-        SelectedID => $Stat->{Valid},
-        Name       => 'Valid',
-    );
-
-    # Create a new statistic
-    if ( !$Stat->{StatType} ) {
-        my $DynamicFiles = $Self->{StatsObject}->GetDynamicFiles();
-
-        my %ObjectModules;
-        DYNAMIC_FILE:
-        for my $DynamicFile ( sort keys %{ $DynamicFiles // {} } ) {
-            my $ObjectName = 'Kernel::System::Stats::Dynamic::' . $DynamicFile;
-
-            next DYNAMIC_FILE if !$Kernel::OM->Get('Kernel::System::Main')->Require($ObjectName);
-            my $Object = $ObjectName->new();
-            next DYNAMIC_FILE if !$Object;
-            if ( $Object->can('GetStatElement') ) {
-                $ObjectModules{DynamicMatrix}->{$ObjectName} = $DynamicFiles->{$DynamicFile};
-            }
-            else {
-                $ObjectModules{DynamicList}->{$ObjectName} = $DynamicFiles->{$DynamicFile};
-            }
-        }
-
-        my $StaticFiles = $Self->{StatsObject}->GetStaticFiles(
-            OnlyUnusedFiles => 1,
-        );
-        for my $StaticFile ( sort keys %{ $StaticFiles // {} } ) {
-            $ObjectModules{Static}->{ 'Kernel::System::Stats::Static::' . $StaticFile } = $StaticFiles->{$StaticFile};
-        }
-
-        my $StatisticPreselection = $ParamObject->GetParam( Param => 'StatisticPreselection' );
-
-        if ( $StatisticPreselection eq 'Static' ) {
-            $Frontend{StatType}         = 'static';
-            $Frontend{SelectObjectType} = $LayoutObject->BuildSelection(
-                Data        => $ObjectModules{Static},
-                Name        => 'ObjectModule',
-                Class       => 'Validate_Required' . ( $Errors{ObjectModuleServerError} ? ' ServerError' : '' ),
-                Translation => 0,
-            );
-        }
-        elsif ( $StatisticPreselection eq 'DynamicList' ) {
-            $Frontend{StatType}         = 'dynamic';
-            $Frontend{SelectObjectType} = $LayoutObject->BuildSelection(
-                Data        => $ObjectModules{DynamicList},
-                Name        => 'ObjectModule',
-                Translation => 1,
-                Class       => ( $Errors{ObjectModuleServerError} ? ' ServerError' : '' ),
-                SelectedID  => $ConfigObject->Get('Stats::DefaultSelectedDynamicObject'),
-            );
-        }
-
-        # DynamicMatrix
-        else {
-            $Frontend{StatType}         = 'dynamic';
-            $Frontend{SelectObjectType} = $LayoutObject->BuildSelection(
-                Data        => $ObjectModules{DynamicMatrix},
-                Name        => 'ObjectModule',
-                Translation => 1,
-                Class       => ( $Errors{ObjectModuleServerError} ? ' ServerError' : '' ),
-                SelectedID  => $ConfigObject->Get('Stats::DefaultSelectedDynamicObject'),
-            );
-
-        }
-
-        #use Data::Dumper;
-        #print STDERR Dumper(\$Frontend{SelectObjectType});
-
-    }
-
-    # create multiselectboxes 'permission'
-    my %Permission = (
-        Data => { $Kernel::OM->Get('Kernel::System::Group')->GroupList( Valid => 1 ) },
-        Name => 'Permission',
-        Class => 'Validate_Required' . ( $Errors{PermissionServerError} ? ' ServerError' : '' ),
-        Multiple    => 1,
-        Size        => 5,
-        Translation => 0,
-    );
-    if ( $Stat->{Permission} ) {
-        $Permission{SelectedID} = $Stat->{Permission};
-    }
-    else {
-        $Permission{SelectedValue} = $ConfigObject->Get('Stats::DefaultSelectedPermissions');
-    }
-    $Stat->{SelectPermission} = $LayoutObject->BuildSelection(%Permission);
-
-    # create multiselectboxes 'format'
-    my $GDAvailable;
-    my $AvailableFormats = $ConfigObject->Get('Stats::Format');
-
-    # check availability of packages
-    for my $Module ( 'GD', 'GD::Graph' ) {
-        $GDAvailable = ( $Kernel::OM->Get('Kernel::System::Main')->Require($Module) ) ? 1 : 0;
-    }
-
-    # if the GD package is not installed, all the graph options will be disabled
-    if ( !$GDAvailable ) {
-        my @FormatData = map {
-            Key          => $_,
-                Value    => $AvailableFormats->{$_},
-                Disabled => ( ( $_ =~ m/GD/gi ) ? 1 : 0 ),
-        }, keys %{$AvailableFormats};
-
-        $AvailableFormats = \@FormatData;
-        $LayoutObject->Block( Name => 'PackageUnavailableMsg' );
-    }
-
-    $Stat->{SelectFormat} = $LayoutObject->BuildSelection(
-        Data       => $AvailableFormats,
-        Name       => 'Format',
-        Class      => 'Validate_Required' . ( $Errors{FormatServerError} ? ' ServerError' : '' ),
-        Multiple   => 1,
-        Size       => 5,
-        SelectedID => $Stat->{Format}
-            || $ConfigObject->Get('Stats::DefaultSelectedFormat'),
-    );
-
-    # create multiselectboxes 'graphsize'
-    $Stat->{SelectGraphSize} = $LayoutObject->BuildSelection(
-        Data        => $ConfigObject->Get('Stats::GraphSize'),
-        Name        => 'GraphSize',
-        Multiple    => 1,
-        Size        => 3,
-        SelectedID  => $Stat->{GraphSize},
-        Translation => 0,
-        Disabled    => ( first { $_ =~ m{^GD::}smx } @{ $Stat->{GraphSize} } ) ? 0 : 1,
-    );
-
-    my $Output .= $LayoutObject->Output(
-        TemplateFile => 'AgentStatistics/GeneralSpecificationsWidget',
-        Data         => {
-            %Frontend,
-            %{$Stat},
-            %Errors,
-        },
-    );
-    return $Output;
 }
 
 =item _ColumnAndRowTranslation()
