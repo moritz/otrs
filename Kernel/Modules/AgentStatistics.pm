@@ -67,10 +67,27 @@ sub new {
 sub Run {
     my ( $Self, %Param ) = @_;
 
+    # RO subactions
+    if ( !$Self->{AccessRo} ) {
+        return $Kernel::OM->Get('Kernel::Output::HTML::Layout')->NoPermission( WithHeader => 'yes' );
+    }
+
     if ( $Self->{Subaction} eq 'Overview' ) {
         return $Self->OverviewScreen();
     }
-    elsif ( $Self->{Subaction} eq 'Add' ) {
+    elsif ( $Self->{Subaction} eq 'View' ) {
+        return $Self->ViewScreen();
+    }
+    elsif ( $Self->{Subaction} eq 'Run' ) {
+        return $Self->RunAction();
+    }
+
+    # RW subactions
+    if ( !$Self->{AccessRw} ) {
+        return $Kernel::OM->Get('Kernel::Output::HTML::Layout')->NoPermission( WithHeader => 'yes' )
+    }
+
+    if ( $Self->{Subaction} eq 'Add' ) {
         return $Self->AddScreen();
     }
     elsif ( $Self->{Subaction} eq 'AddAction' ) {
@@ -88,12 +105,6 @@ sub Run {
     elsif ( $Self->{Subaction} eq 'Edit' ) {
         return $Self->EditScreen();
     }
-    elsif ( $Self->{Subaction} eq 'View' ) {
-        return $Self->ViewScreen();
-    }
-    elsif ( $Self->{Subaction} eq 'Run' ) {
-        return $Self->RunAction();
-    }
     elsif ( $Self->{Subaction} eq 'GeneralSpecificationsWidgetAJAX' ) {
         return $Self->GeneralSpecificationsWidgetAJAX();
     }
@@ -108,9 +119,6 @@ sub OverviewScreen {
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
     my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
     my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
-
-    # permission check
-    $Self->{AccessRo} || return $LayoutObject->NoPermission( WithHeader => 'yes' );
 
     # Get Params
     $Param{SearchPageShown} = $ConfigObject->Get('Stats::SearchPageShown') || 10;
@@ -208,10 +216,6 @@ sub ImportScreen {
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
     my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
 
-    if ( !$Self->{AccessRw} ) {
-        return $LayoutObject->NoPermission( WithHeader => 'yes' )
-    }
-
     my %Error;
     my $Status = $ParamObject->GetParam( Param => 'Status' );
 
@@ -269,10 +273,6 @@ sub ExportAction {
 
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
 
-    if ( !$Self->{AccessRw} ) {
-        return $LayoutObject->NoPermission( WithHeader => 'yes' );
-    }
-
     $LayoutObject->ChallengeTokenCheck();
 
     my $StatID = $Kernel::OM->Get('Kernel::System::Web::Request')->GetParam( Param => 'StatID' );
@@ -295,10 +295,6 @@ sub DeleteAction {
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
     my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
 
-    if ( !$Self->{AccessRw} ) {
-        return $LayoutObject->NoPermission( WithHeader => 'yes' );
-    }
-
     my $StatID = $ParamObject->GetParam( Param => 'StatID' );
     if ( !$StatID ) {
         return $LayoutObject->ErrorScreen( Message => 'Delete: Get no StatID!' );
@@ -316,9 +312,6 @@ sub EditScreen {
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
     my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
     my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
-
-    # permission check
-    return $LayoutObject->NoPermission( WithHeader => 'yes' ) if !$Self->{AccessRw};
 
     # get param
     if ( !( $Param{StatID} = $ParamObject->GetParam( Param => 'StatID' ) ) ) {
@@ -359,9 +352,6 @@ sub ViewScreen {
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
     my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
     my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
-
-    # permission check
-    $Self->{AccessRo} || return $LayoutObject->NoPermission( WithHeader => 'yes' );
 
     # get StatID
     my $StatID = $ParamObject->GetParam( Param => 'StatID' );
@@ -415,10 +405,6 @@ sub AddScreen {
     my ( $Self, %Param ) = @_;
 
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
-
-    if ( !$Self->{AccessRw} ) {
-        return $LayoutObject->NoPermission( WithHeader => 'yes' );
-    }
 
     my %Errors = %{ $Param{Errors} // {} };
 
@@ -554,9 +540,6 @@ sub RunAction {
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
     my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
     my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
-
-    # permission check
-    $Self->{AccessRo} || return $LayoutObject->NoPermission( WithHeader => 'yes' );
 
     # get params
     for (qw(Format GraphSize StatID ExchangeAxis Name Cached)) {
