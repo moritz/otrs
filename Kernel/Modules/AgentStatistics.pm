@@ -54,6 +54,13 @@ sub new {
     );
     $Self->{StatsObject} = $Kernel::OM->Get('Kernel::System::Stats');
 
+    $Kernel::OM->ObjectParamAdd(
+        'Kernel::Output::HTML::Statistics::View' => {
+            StatsObject => $Self->{StatsObject},
+        },
+    );
+    $Self->{StatsViewObject} = $Kernel::OM->Get('Kernel::Output::HTML::Statistics::View');
+
     return $Self;
 }
 
@@ -328,12 +335,7 @@ sub EditScreen {
     );
 
     if ( $Stat->{StatType} eq 'dynamic' ) {
-        $Kernel::OM->ObjectParamAdd(
-            'Kernel::Output::HTML::Statistics::View' => {
-                StatsObject => $Self->{StatsObject},
-            },
-        );
-        $Frontend{PreviewContainer} = $Kernel::OM->Get('Kernel::Output::HTML::Statistics::View')->PreviewContainer(
+        $Frontend{PreviewContainer} = $Self->{StatsViewObject}->PreviewContainer(
             Stat => $Stat,
         );
     }
@@ -391,15 +393,9 @@ sub ViewScreen {
 
     my %Frontend;
 
-    $Kernel::OM->ObjectParamAdd(
-        'Kernel::Output::HTML::Statistics::View' => {
-            StatsObject => $Self->{StatsObject},
-        },
-    );
-    $Frontend{StatsViewParameterWidget}
-        = $Kernel::OM->Get('Kernel::Output::HTML::Statistics::View')->StatsViewParameterWidget(
+    $Frontend{StatsViewParameterWidget} = $Self->{StatsViewObject}->StatsViewParameterWidget(
         Stat => $Stat,
-        );
+    );
 
     my $Output = $LayoutObject->Header( Title => 'View' );
     $Output .= $LayoutObject->NavigationBar();
@@ -453,11 +449,6 @@ sub AddScreen {
 
     # This is a page reload because of validation errors
     if (%Errors) {
-        $Kernel::OM->ObjectParamAdd(
-            'Kernel::Output::HTML::Statistics::View' => {
-                StatsObject => $Self->{StatsObject},
-            },
-        );
         $Frontend{GeneralSpecificationsWidget} = $Self->_GeneralSpecificationsWidget(
             Errors => \%Errors,
         );
@@ -916,12 +907,7 @@ sub RunAction {
         @StatArray = @NewStatArray;
     }
 
-    $Kernel::OM->ObjectParamAdd(
-        'Kernel::Output::HTML::Statistics::View' => {
-            StatsObject => $Self->{StatsObject},
-        },
-    );
-    return $Kernel::OM->Get('Kernel::Output::HTML::Statistics::View')->RenderStatisticsResultData(
+    return $Self->{StatsViewObject}->RenderStatisticsResultData(
         StatArray => \@StatArray,
         Stat      => $Stat,
         %Param
