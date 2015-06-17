@@ -33,6 +33,7 @@
     <div class="Clear"></div>
 
 [% IF !Data.StatID %]
+    <input type="hidden" name="StatisticPreselection" value="[% Data.StatisticPreselection | html %]" />
     <label class="Mandatory" for="Description">
         <span class="Marker">*</span>
         [% Translate("Object type") | html %]:

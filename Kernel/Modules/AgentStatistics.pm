@@ -407,7 +407,9 @@ sub AddScreen {
 
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
 
+    # In case of page reload because of errors
     my %Errors = %{ $Param{Errors} // {} };
+    my %GetParam = %{ $Param{GetParam} // {} };
 
     my %Frontend;
 
@@ -438,6 +440,7 @@ sub AddScreen {
     if (%Errors) {
         $Frontend{GeneralSpecificationsWidget} = $Self->{StatsViewObject}->GeneralSpecificationsWidget(
             Errors => \%Errors,
+            GetParam => \%GetParam,
         );
         $Frontend{ShowFormInitially} = 1;
     }
@@ -468,7 +471,7 @@ sub AddAction {
     my %Data;
     for my $Key (qw(Title Description ObjectModule StatType Valid)) {
         $Data{$Key} = $ParamObject->GetParam( Param => $Key ) // '';
-        if ( !$Data{$Key} ) {
+        if ( !length $Data{$Key} ) { # Valid can be 0
             $Errors{ $Key . 'ServerError' } = 'ServerError';
         }
     }
@@ -508,13 +511,17 @@ sub AddAction {
         StatData => \%Data,
         Section  => 'Specification'
     );
+
     if ( %Errors || @Notify ) {
-        return $Self->AddScreen( Errors => \%Errors );
+        return $Self->AddScreen(
+            Errors => \%Errors,
+            GetParam => \%Data,
+        );
     }
 
     $Param{StatID} = $Self->{StatsObject}->StatsAdd();
     if ( !$Param{StatID} ) {
-        return $LayoutObject->ErrorScreen( Message => 'Add: Get no StatID!' );
+        return $LayoutObject->ErrorScreen( Message => 'Could not create statistic.' );
     }
     $Self->{StatsObject}->StatsUpdate(
         StatID => $Param{StatID},

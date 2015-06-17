@@ -595,7 +595,9 @@ sub GeneralSpecificationsWidget {
     my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
     my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
 
+    # In case of page reload because of errors
     my %Errors = %{ $Param{Errors} // {} };
+    my %GetParam = %{ $Param{GetParam} // {} };
 
     my $Stat;
     if ( $Param{StatID} ) {
@@ -616,7 +618,7 @@ sub GeneralSpecificationsWidget {
                 0 => 'No',
                 1 => 'Yes'
             },
-            SelectedID => $Stat->{$Key} || 0,
+            SelectedID => $GetParam{$Key} // $Stat->{$Key} || 0,
             Name => $Key,
         );
     }
@@ -638,7 +640,7 @@ sub GeneralSpecificationsWidget {
             0 => 'invalid',
             1 => 'valid',
         },
-        SelectedID => $Stat->{Valid},
+        SelectedID => $GetParam{Valid} // $Stat->{Valid},
         Name       => 'Valid',
     );
 
@@ -669,25 +671,26 @@ sub GeneralSpecificationsWidget {
             $ObjectModules{Static}->{ 'Kernel::System::Stats::Static::' . $StaticFile } = $StaticFiles->{$StaticFile};
         }
 
-        my $StatisticPreselection = $ParamObject->GetParam( Param => 'StatisticPreselection' );
+        $Frontend{StatisticPreselection} = $ParamObject->GetParam( Param => 'StatisticPreselection' );
 
-        if ( $StatisticPreselection eq 'Static' ) {
+        if ( $Frontend{StatisticPreselection} eq 'Static' ) {
             $Frontend{StatType}         = 'static';
             $Frontend{SelectObjectType} = $LayoutObject->BuildSelection(
                 Data        => $ObjectModules{Static},
                 Name        => 'ObjectModule',
                 Class       => 'Validate_Required' . ( $Errors{ObjectModuleServerError} ? ' ServerError' : '' ),
                 Translation => 0,
+                SelectedID  => $GetParam{ObjectModule},
             );
         }
-        elsif ( $StatisticPreselection eq 'DynamicList' ) {
+        elsif ( $Frontend{StatisticPreselection} eq 'DynamicList' ) {
             $Frontend{StatType}         = 'dynamic';
             $Frontend{SelectObjectType} = $LayoutObject->BuildSelection(
                 Data        => $ObjectModules{DynamicList},
                 Name        => 'ObjectModule',
                 Translation => 1,
                 Class       => ( $Errors{ObjectModuleServerError} ? ' ServerError' : '' ),
-                SelectedID  => $ConfigObject->Get('Stats::DefaultSelectedDynamicObject'),
+                SelectedID  => $GetParam{ObjectModule} // $ConfigObject->Get('Stats::DefaultSelectedDynamicObject'),
             );
         }
 
@@ -699,7 +702,7 @@ sub GeneralSpecificationsWidget {
                 Name        => 'ObjectModule',
                 Translation => 1,
                 Class       => ( $Errors{ObjectModuleServerError} ? ' ServerError' : '' ),
-                SelectedID  => $ConfigObject->Get('Stats::DefaultSelectedDynamicObject'),
+                SelectedID  => $GetParam{ObjectModule} // $ConfigObject->Get('Stats::DefaultSelectedDynamicObject'),
             );
 
         }
@@ -718,8 +721,8 @@ sub GeneralSpecificationsWidget {
         Size        => 5,
         Translation => 0,
     );
-    if ( $Stat->{Permission} ) {
-        $Permission{SelectedID} = $Stat->{Permission};
+    if ( $GetParam{Permission} // $Stat->{Permission} ) {
+        $Permission{SelectedID} = $GetParam{Permission} // $Stat->{Permission};
     }
     else {
         $Permission{SelectedValue} = $ConfigObject->Get('Stats::DefaultSelectedPermissions');
@@ -753,8 +756,7 @@ sub GeneralSpecificationsWidget {
         Class      => 'Validate_Required' . ( $Errors{FormatServerError} ? ' ServerError' : '' ),
         Multiple   => 1,
         Size       => 5,
-        SelectedID => $Stat->{Format}
-            || $ConfigObject->Get('Stats::DefaultSelectedFormat'),
+        SelectedID => $GetParam{Format} // $Stat->{Format} || $ConfigObject->Get('Stats::DefaultSelectedFormat'),
     );
 
     # create multiselectboxes 'graphsize'
@@ -763,7 +765,7 @@ sub GeneralSpecificationsWidget {
         Name        => 'GraphSize',
         Multiple    => 1,
         Size        => 3,
-        SelectedID  => $Stat->{GraphSize},
+        SelectedID  => $GetParam{GraphSize} // $Stat->{GraphSize},
         Translation => 0,
         Disabled    => ( first { $_ =~ m{^GD::}smx } @{ $Stat->{GraphSize} } ) ? 0 : 1,
     );
@@ -773,6 +775,7 @@ sub GeneralSpecificationsWidget {
         Data         => {
             %Frontend,
             %{$Stat},
+            %GetParam,
             %Errors,
         },
     );
