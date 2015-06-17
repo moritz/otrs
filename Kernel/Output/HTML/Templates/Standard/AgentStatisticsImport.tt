@@ -34,8 +34,7 @@
 
                 <form action="[% Env("CGIHandle") %]" method="post" enctype="multipart/form-data" class="Validate">
                     <input type="hidden" name="Action"    value="[% Env("Action") %]"/>
-                    <input type="hidden" name="Subaction" value="Import"/>
-                    <input type="hidden" name="Status"    value="Action"/>
+                    <input type="hidden" name="Subaction" value="ImportAction"/>
 
                     <fieldset class="TableLike">
                         <label for="File">[% Translate("File") | html %]:</label>

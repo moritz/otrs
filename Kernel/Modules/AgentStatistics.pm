@@ -67,46 +67,41 @@ sub new {
 sub Run {
     my ( $Self, %Param ) = @_;
 
-    # RO subactions
-    if ( !$Self->{AccessRo} ) {
-        return $Kernel::OM->Get('Kernel::Output::HTML::Layout')->NoPermission( WithHeader => 'yes' );
+    my $Subaction = $Self->{Subaction};
+
+    my %RoSubactions = (
+        Overview => 'OverviewScreen',
+        View     => 'ViewScreen',
+        Run      => 'RunAction',
+    );
+
+    if ( $RoSubactions{$Subaction} ) {
+        if ( !$Self->{AccessRo} ) {
+            return $Kernel::OM->Get('Kernel::Output::HTML::Layout')->NoPermission( WithHeader => 'yes' );
+        }
+        my $Method = $RoSubactions{$Subaction};
+        return $Self->$Method();
     }
 
-    if ( $Self->{Subaction} eq 'Overview' ) {
-        return $Self->OverviewScreen();
-    }
-    elsif ( $Self->{Subaction} eq 'View' ) {
-        return $Self->ViewScreen();
-    }
-    elsif ( $Self->{Subaction} eq 'Run' ) {
-        return $Self->RunAction();
-    }
+    my %RwSubactions = (
+        Add                             => 'AddScreen',
+        AddAction                       => 'AddAction',
+        Edit                            => 'EditScreen',
+        EditAction                      => 'EditAction',
+        Import                          => 'ImportScreen',
+        ImportAction                    => 'ImportAction',
+        ExportAction                    => 'ExportAction',
+        DeleteAction                    => 'DeleteAction',
+        ExportAction                    => 'ExportAction',
+        GeneralSpecificationsWidgetAJAX => 'GeneralSpecificationsWidgetAJAX',
+    );
 
-    # RW subactions
-    if ( !$Self->{AccessRw} ) {
-        return $Kernel::OM->Get('Kernel::Output::HTML::Layout')->NoPermission( WithHeader => 'yes' )
-    }
-
-    if ( $Self->{Subaction} eq 'Add' ) {
-        return $Self->AddScreen();
-    }
-    elsif ( $Self->{Subaction} eq 'AddAction' ) {
-        return $Self->AddAction();
-    }
-    elsif ( $Self->{Subaction} eq 'Import' ) {
-        return $Self->ImportScreen();
-    }
-    elsif ( $Self->{Subaction} eq 'Export' ) {
-        return $Self->ExportAction();
-    }
-    elsif ( $Self->{Subaction} eq 'Delete' ) {
-        return $Self->DeleteAction();
-    }
-    elsif ( $Self->{Subaction} eq 'Edit' ) {
-        return $Self->EditScreen();
-    }
-    elsif ( $Self->{Subaction} eq 'GeneralSpecificationsWidgetAJAX' ) {
-        return $Self->GeneralSpecificationsWidgetAJAX();
+    if ( $RwSubactions{$Subaction} ) {
+        if ( !$Self->{AccessRw} ) {
+            return $Kernel::OM->Get('Kernel::Output::HTML::Layout')->NoPermission( WithHeader => 'yes' );
+        }
+        my $Method = $RwSubactions{$Subaction};
+        return $Self->$Method();
     }
 
     # No (known) subaction?
@@ -214,58 +209,64 @@ sub ImportScreen {
     my ( $Self, %Param ) = @_;
 
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
-    my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
 
-    my %Error;
-    my $Status = $ParamObject->GetParam( Param => 'Status' );
-
-    if ( $Status && $Status eq 'Action' ) {
-
-        # challenge token check for write action
-        $LayoutObject->ChallengeTokenCheck();
-
-        my $UploadFile = $ParamObject->GetParam( Param => 'File' );
-        if ($UploadFile) {
-            my %UploadStuff = $ParamObject->GetUploadAll(
-                Param    => 'File',
-                Encoding => 'Raw'
-            );
-            if ( $UploadStuff{Content} =~ m{<otrs_stats>}x ) {
-                my $StatID = $Self->{StatsObject}->Import(
-                    Content => $UploadStuff{Content},
-                );
-
-                if ($StatID) {
-                    $Error{FileServerError}        = 'ServerError';
-                    $Error{FileServerErrorMessage} = Translatable("Statistic could not be imported.");
-                }
-
-                # redirect to configure
-                return $LayoutObject->Redirect(
-                    OP => "Action=AgentStatistics;Subaction=Edit;StatID=$StatID"
-                );
-            }
-            else {
-                $Error{FileServerError}        = 'ServerError';
-                $Error{FileServerErrorMessage} = Translatable("Please upload a valid statistic file.");
-            }
-        }
-        else {
-            $Error{FileServerError}        = 'ServerError';
-            $Error{FileServerErrorMessage} = Translatable("This field is required.");
-        }
-    }
+    my %Errors = %{ $Param{Errors} // {} };
 
     my $Output = $LayoutObject->Header( Title => 'Import' );
     $Output .= $LayoutObject->NavigationBar();
     $Output .= $LayoutObject->Output(
         TemplateFile => 'AgentStatisticsImport',
         Data         => {
-            %Error,
+            %Errors,
         },
     );
     $Output .= $LayoutObject->Footer();
     return $Output;
+}
+
+sub ImportAction {
+    my ( $Self, %Param ) = @_;
+
+    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+    my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
+
+    my %Errors;
+
+    # challenge token check for write action
+    $LayoutObject->ChallengeTokenCheck();
+
+    my $UploadFile = $ParamObject->GetParam( Param => 'File' );
+    if ($UploadFile) {
+        my %UploadStuff = $ParamObject->GetUploadAll(
+            Param    => 'File',
+            Encoding => 'Raw'
+        );
+        if ( $UploadStuff{Content} =~ m{<otrs_stats>}x ) {
+            my $StatID = $Self->{StatsObject}->Import(
+                Content => $UploadStuff{Content},
+            );
+
+            if ($StatID) {
+                $Errors{FileServerError}        = 'ServerError';
+                $Errors{FileServerErrorMessage} = Translatable("Statistic could not be imported.");
+            }
+
+            # redirect to configure
+            return $LayoutObject->Redirect(
+                OP => "Action=AgentStatistics;Subaction=Edit;StatID=$StatID"
+            );
+        }
+        else {
+            $Errors{FileServerError}        = 'ServerError';
+            $Errors{FileServerErrorMessage} = Translatable("Please upload a valid statistic file.");
+        }
+    }
+    else {
+        $Errors{FileServerError}        = 'ServerError';
+        $Errors{FileServerErrorMessage} = Translatable("This field is required.");
+    }
+
+    return $Self->ImportScreen( Errors => \%Errors );
 }
 
 sub ExportAction {
@@ -910,203 +911,6 @@ sub GeneralSpecificationsWidgetAJAX {
         Type        => 'inline',
         NoCache     => 1,
     );
-}
-
-=item _ColumnAndRowTranslation()
-
-translate the column and row name if needed
-
-    $StatsObject->_ColumnAndRowTranslation(
-        StatArrayRef => $StatArrayRef,
-        HeadArrayRef => $HeadArrayRef,
-        StatRef      => $StatRef,
-        ExchangeAxis => 1 | 0,
-    );
-
-=cut
-
-sub _ColumnAndRowTranslation {
-    my ( $Self, %Param ) = @_;
-
-    # check if need params are available
-    for my $NeededParam (qw(StatArrayRef HeadArrayRef StatRef)) {
-        if ( !$Param{$NeededParam} ) {
-            return $Kernel::OM->Get('Kernel::Output::HTML::Layout')->ErrorScreen(
-                Message => "_ColumnAndRowTranslation: Need $NeededParam!"
-            );
-        }
-    }
-
-    # get config object
-    my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
-
-    # create language object
-    $Kernel::OM->ObjectParamAdd(
-        'Kernel::Language' => {
-            UserLanguage => $Param{UserLanguage} || $ConfigObject->Get('DefaultLanguage') || 'en',
-            }
-    );
-    my $LanguageObject = $Kernel::OM->Get('Kernel::Language');
-
-    # find out, if the column or row names should be translated
-    my %Translation;
-    my %Sort;
-
-    for my $Use (qw( UseAsXvalue UseAsValueSeries )) {
-        if (
-            $Param{StatRef}->{StatType} eq 'dynamic'
-            && $Param{StatRef}->{$Use}
-            && ref( $Param{StatRef}->{$Use} ) eq 'ARRAY'
-            )
-        {
-            my @Array = @{ $Param{StatRef}->{$Use} };
-
-            ELEMENT:
-            for my $Element (@Array) {
-                next ELEMENT if !$Element->{SelectedValues};
-
-                if ( $Element->{Translation} && $Element->{Block} eq 'Time' ) {
-                    $Translation{$Use} = 'Time';
-                }
-                elsif ( $Element->{Translation} ) {
-                    $Translation{$Use} = 'Common';
-                }
-                else {
-                    $Translation{$Use} = '';
-                }
-
-                if (
-                    $Element->{Translation}
-                    && $Element->{Block} ne 'Time'
-                    && !$Element->{SortIndividual}
-                    )
-                {
-                    $Sort{$Use} = 1;
-                }
-                last ELEMENT;
-            }
-        }
-    }
-
-    # check if the axis are changed
-    if ( $Param{ExchangeAxis} ) {
-        my $UseAsXvalueOld = $Translation{UseAsXvalue};
-        $Translation{UseAsXvalue}      = $Translation{UseAsValueSeries};
-        $Translation{UseAsValueSeries} = $UseAsXvalueOld;
-
-        my $SortUseAsXvalueOld = $Sort{UseAsXvalue};
-        $Sort{UseAsXvalue}      = $Sort{UseAsValueSeries};
-        $Sort{UseAsValueSeries} = $SortUseAsXvalueOld;
-    }
-
-    # translate the headline
-    $Param{HeadArrayRef}->[0] = $LanguageObject->Translate( $Param{HeadArrayRef}->[0] );
-
-    if ( $Translation{UseAsXvalue} && $Translation{UseAsXvalue} eq 'Time' ) {
-        for my $Word ( @{ $Param{HeadArrayRef} } ) {
-            if ( $Word =~ m{ ^ (\w+?) ( \s \d+ ) $ }smx ) {
-                my $TranslatedWord = $LanguageObject->Translate($1);
-                $Word =~ s{ ^ ( \w+? ) ( \s \d+ ) $ }{$TranslatedWord$2}smx;
-            }
-        }
-    }
-
-    elsif ( $Translation{UseAsXvalue} ) {
-        for my $Word ( @{ $Param{HeadArrayRef} } ) {
-            $Word = $LanguageObject->Translate($Word);
-        }
-    }
-
-    # sort the headline
-    if ( $Sort{UseAsXvalue} ) {
-        my @HeadOld = @{ $Param{HeadArrayRef} };
-        shift @HeadOld;    # because the first value is no sortable column name
-
-        # special handling if the sumfunction is used
-        my $SumColRef;
-        if ( $Param{StatRef}->{SumRow} ) {
-            $SumColRef = pop @HeadOld;
-        }
-
-        # sort
-        my @SortedHead = sort { $a cmp $b } @HeadOld;
-
-        # special handling if the sumfunction is used
-        if ( $Param{StatRef}->{SumCol} ) {
-            push @SortedHead, $SumColRef;
-            push @HeadOld,    $SumColRef;
-        }
-
-        # add the row names to the new StatArray
-        my @StatArrayNew;
-        for my $Row ( @{ $Param{StatArrayRef} } ) {
-            push @StatArrayNew, [ $Row->[0] ];
-        }
-
-        # sort the values
-        for my $ColumnName (@SortedHead) {
-            my $Counter = 0;
-            COLUMNNAMEOLD:
-            for my $ColumnNameOld (@HeadOld) {
-                $Counter++;
-                next COLUMNNAMEOLD if $ColumnNameOld ne $ColumnName;
-
-                for my $RowLine ( 0 .. $#StatArrayNew ) {
-                    push @{ $StatArrayNew[$RowLine] }, $Param{StatArrayRef}->[$RowLine]->[$Counter];
-                }
-                last COLUMNNAMEOLD;
-            }
-        }
-
-        # bring the data back to the references
-        unshift @SortedHead, $Param{HeadArrayRef}->[0];
-        @{ $Param{HeadArrayRef} } = @SortedHead;
-        @{ $Param{StatArrayRef} } = @StatArrayNew;
-    }
-
-    # translate the row description
-    if ( $Translation{UseAsValueSeries} && $Translation{UseAsValueSeries} eq 'Time' ) {
-        for my $Word ( @{ $Param{StatArrayRef} } ) {
-            if ( $Word->[0] =~ m{ ^ (\w+?) ( \s \d+ ) $ }smx ) {
-                my $TranslatedWord = $LanguageObject->Translate($1);
-                $Word->[0] =~ s{ ^ ( \w+? ) ( \s \d+ ) $ }{$TranslatedWord$2}smx;
-            }
-        }
-    }
-    elsif ( $Translation{UseAsValueSeries} ) {
-
-        # translate
-        for my $Word ( @{ $Param{StatArrayRef} } ) {
-            $Word->[0] = $LanguageObject->Translate( $Word->[0] );
-        }
-    }
-
-    # sort the row description
-    if ( $Sort{UseAsValueSeries} ) {
-
-        # special handling if the sumfunction is used
-        my $SumRowArrayRef;
-        if ( $Param{StatRef}->{SumRow} ) {
-            $SumRowArrayRef = pop @{ $Param{StatArrayRef} };
-        }
-
-        # sort
-        my $DisableDefaultResultSort = grep {
-            $_->{DisableDefaultResultSort}
-                && $_->{DisableDefaultResultSort} == 1
-        } @{ $Param{StatRef}->{UseAsXvalue} };
-
-        if ( !$DisableDefaultResultSort ) {
-            @{ $Param{StatArrayRef} } = sort { $a->[0] cmp $b->[0] } @{ $Param{StatArrayRef} };
-        }
-
-        # special handling if the sumfunction is used
-        if ( $Param{StatRef}->{SumRow} ) {
-            push @{ $Param{StatArrayRef} }, $SumRowArrayRef;
-        }
-    }
-
-    return 1;
 }
 
 # ATTENTION: this function delivers only approximations!!!

@@ -93,13 +93,13 @@
                             <td>[% Translate(Data.ObjectName) | html %]</td>
                             [% IF Data.AccessRw %]
                             <td class="Center" title="[% Translate('Export statistic "%s"', Data.Title) | html %]">
-                                <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=Export;StatID=[% Data.StatID | uri %];[% Env('ChallengeTokenParam') %]" class="AsBlock">
+                                <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=ExportAction;StatID=[% Data.StatID | uri %];[% Env('ChallengeTokenParam') %]" class="AsBlock">
                                     <i class="fa fa-download"></i>
                                     <span class="InvisibleText">[% Translate('Export statistic %s', Data.Title) | html %]</span>
                                 </a>
                             </td>
                             <td class="Center" title="[% Translate('Delete statistic "%s"', Data.Title) | html %]">
-                                <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=Delete;StatID=[% Data.StatID | uri %];[% Env('ChallengeTokenParam') %]" class="AsBlock StatDelete" data-stat-title="[% Data.Title | html %]">
+                                <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=DeleteAction;StatID=[% Data.StatID | uri %];[% Env('ChallengeTokenParam') %]" class="AsBlock StatDelete" data-stat-title="[% Data.Title | html %]">
                                     <i class="fa fa-trash"></i>
                                     <span class="InvisibleText">[% Translate('Delete statistic %s', Data.Title) | html %]</span>
                                 </a>
