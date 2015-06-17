@@ -596,7 +596,7 @@ sub GeneralSpecificationsWidget {
     my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
 
     # In case of page reload because of errors
-    my %Errors = %{ $Param{Errors} // {} };
+    my %Errors   = %{ $Param{Errors}   // {} };
     my %GetParam = %{ $Param{GetParam} // {} };
 
     my $Stat;
@@ -641,7 +641,7 @@ sub GeneralSpecificationsWidget {
             1 => 'valid',
         },
         SelectedID => $GetParam{Valid} // $Stat->{Valid},
-        Name       => 'Valid',
+        Name => 'Valid',
     );
 
     # Create a new statistic
@@ -690,7 +690,7 @@ sub GeneralSpecificationsWidget {
                 Name        => 'ObjectModule',
                 Translation => 1,
                 Class       => ( $Errors{ObjectModuleServerError} ? ' ServerError' : '' ),
-                SelectedID  => $GetParam{ObjectModule} // $ConfigObject->Get('Stats::DefaultSelectedDynamicObject'),
+                SelectedID => $GetParam{ObjectModule} // $ConfigObject->Get('Stats::DefaultSelectedDynamicObject'),
             );
         }
 
@@ -702,7 +702,7 @@ sub GeneralSpecificationsWidget {
                 Name        => 'ObjectModule',
                 Translation => 1,
                 Class       => ( $Errors{ObjectModuleServerError} ? ' ServerError' : '' ),
-                SelectedID  => $GetParam{ObjectModule} // $ConfigObject->Get('Stats::DefaultSelectedDynamicObject'),
+                SelectedID => $GetParam{ObjectModule} // $ConfigObject->Get('Stats::DefaultSelectedDynamicObject'),
             );
 
         }
@@ -751,11 +751,11 @@ sub GeneralSpecificationsWidget {
     }
 
     $Stat->{SelectFormat} = $LayoutObject->BuildSelection(
-        Data       => $AvailableFormats,
-        Name       => 'Format',
-        Class      => 'Validate_Required' . ( $Errors{FormatServerError} ? ' ServerError' : '' ),
-        Multiple   => 1,
-        Size       => 5,
+        Data     => $AvailableFormats,
+        Name     => 'Format',
+        Class    => 'Validate_Required' . ( $Errors{FormatServerError} ? ' ServerError' : '' ),
+        Multiple => 1,
+        Size     => 5,
         SelectedID => $GetParam{Format} // $Stat->{Format} || $ConfigObject->Get('Stats::DefaultSelectedFormat'),
     );
 
@@ -780,6 +780,108 @@ sub GeneralSpecificationsWidget {
         },
     );
     return $Output;
+}
+
+sub XAxisWidget {
+    my ( $Self, %Param ) = @_;
+
+    my $Stat = $Param{Stat};
+
+    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+
+    #my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
+    my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
+
+    # if only one value is available select this value
+    if ( !$Stat->{UseAsXvalue}[0]{Selected} && scalar( @{ $Stat->{UseAsXvalue} } ) == 1 ) {
+        $Stat->{UseAsXvalue}[0]{Selected} = 1;
+        $Stat->{UseAsXvalue}[0]{Fixed}    = 1;
+    }
+
+    for my $ObjectAttribute ( @{ $Stat->{UseAsXvalue} } ) {
+        my %BlockData;
+        $BlockData{Fixed}   = 'checked="checked"';
+        $BlockData{Checked} = '';
+
+        # things which should be done if this attribute is selected
+        if ( $ObjectAttribute->{Selected} ) {
+            $BlockData{Checked} = 'checked="checked"';
+            if ( !$ObjectAttribute->{Fixed} ) {
+                $BlockData{Fixed} = '';
+            }
+        }
+
+        if ( $ObjectAttribute->{Block} eq 'SelectField' ) {
+            $ObjectAttribute->{Block} = 'MultiSelectField';
+        }
+
+        if ( $ObjectAttribute->{Block} eq 'MultiSelectField' ) {
+            $BlockData{SelectField} = $LayoutObject->BuildSelection(
+                Data     => $ObjectAttribute->{Values},
+                Name     => $ObjectAttribute->{Element},
+                Multiple => 1,
+                Size     => 5,
+                Class =>
+                    ( $ObjectAttribute->{ShowAsTree} && $ObjectAttribute->{IsDynamicField} )
+                ? 'DynamicFieldWithTreeView'
+                : '',
+                SelectedID     => $ObjectAttribute->{SelectedValues},
+                Translation    => $ObjectAttribute->{Translation},
+                TreeView       => $ObjectAttribute->{TreeView} || 0,
+                Sort           => $ObjectAttribute->{Sort} || undef,
+                SortIndividual => $ObjectAttribute->{SortIndividual} || undef,
+                OnChange =>
+                    "Core.Agent.Stats.SelectRadiobutton('$ObjectAttribute->{Element}', 'Select')",
+
+            );
+
+            if ( $ObjectAttribute->{ShowAsTree} && $ObjectAttribute->{IsDynamicField} ) {
+                my $TreeSelectionMessage = $LayoutObject->{LanguageObject}->Translate("Show Tree Selection");
+                $BlockData{SelectField}
+                    .= ' <a href="#" title="'
+                    . $TreeSelectionMessage
+                    . '" class="ShowTreeSelection"><span>'
+                    . $TreeSelectionMessage . '</span><i class="fa fa-sitemap"></i></a>';
+            }
+        }
+
+        $BlockData{Name}    = $ObjectAttribute->{Name};
+        $BlockData{Element} = $ObjectAttribute->{Element};
+
+        # show the attribute block
+        $LayoutObject->Block(
+            Name => 'Attribute',
+            Data => \%BlockData,
+        );
+
+        if ( $ObjectAttribute->{Block} eq 'Time' ) {
+            my $TimeType = $ConfigObject->Get('Stats::TimeType') || 'Normal';
+            if ( $TimeType eq 'Time' ) {
+                $ObjectAttribute->{Block} = 'Time';
+            }
+            elsif ( $TimeType eq 'Extended' ) {
+                $ObjectAttribute->{Block} = 'TimeExtended';
+            }
+
+            my %TimeData = _Timeoutput( $Self, %{$ObjectAttribute} );
+            %BlockData = ( %BlockData, %TimeData );
+        }
+
+        # show the input element
+        $LayoutObject->Block(
+            Name => $ObjectAttribute->{Block},
+            Data => \%BlockData,
+        );
+    }
+
+    my $Output .= $LayoutObject->Output(
+        TemplateFile => 'AgentStatistics/XAxisWidget',
+        Data         => {
+            %{$Stat},
+        },
+    );
+    return $Output;
+
 }
 
 sub PreviewContainer {

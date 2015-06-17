@@ -58,6 +58,41 @@ Core.Agent.Statistics = (function (TargetNS) {
         });
     };
 
+    function RebuildEditXAxisDialogAddSelection() {
+        $('#EditXAxisDialogAddAttribute').empty();
+        $.each($('#XAxisWidgetContainer .XAxisElement'), function() {
+            var $XAxisElement = $(this),
+                $Option = $($.parseHTML('<option></option>'));
+
+            $Option.val($XAxisElement.data('element'))
+                .text($XAxisElement.find('> label').text())
+                .appendTo('#EditXAxisDialogAddAttribute');
+
+        });
+    }
+
+    function RefreshEditXAxisDialogContent() {
+        RebuildEditXAxisDialogAddSelection();
+        if ($('#EditXAxisDialogField').children().length) {
+            $('#EditXAxisDialogAdd').hide();
+        }
+        else {
+            $('#EditXAxisDialogAdd').show();
+        }
+    }
+
+    TargetNS.XAxisElementAdd = function(ElementName) {
+        var $Element = $('#XAxisWidgetContainer #XAxisElement' + ElementName);
+        $Element.appendTo($('#EditXAxisDialogField'));
+        RefreshEditXAxisDialogContent();
+    };
+
+    TargetNS.XAxisElementDelete = function(ElementName) {
+        var $Element = $('#EditXAxisDialogField #XAxisElement' + ElementName);
+        $Element.appendTo($('#XAxisWidgetContainer'));
+        RefreshEditXAxisDialogContent();
+    };
+
     /**
      * @name InitEditScreen
      * @memberof Core.Agent.Statistics
@@ -68,9 +103,28 @@ Core.Agent.Statistics = (function (TargetNS) {
      *      is being loaded according to the clicked button.
      */
     TargetNS.InitEditScreen = function () {
+        $('button.EditXAxis').on('click', function() {
+            function XAxisEditDialogClose() {
+                $('#EditXAxisDialogTemplateContent').appendTo('#EditXAxisDialogTemplate');
+                RefreshEditXAxisDialogContent();
+                Core.UI.Dialog.CloseDialog($('.Dialog'));
+            }
+            RefreshEditXAxisDialogContent();
+            Core.UI.Dialog.ShowContentDialog('<div id="XAxisEdit" style="max-height: 500px; overflow: auto;"></div>', '123', 100, 100, true, [{Label: "Apply", Type: 'Close', Function: XAxisEditDialogClose}], false);
+            $('#EditXAxisDialogTemplateContent').appendTo('#XAxisEdit');
 
-        //$('.SwitchView .fa:first').show();
+            return false;
+        });
 
+        $('#EditXAxisDialogAdd .AddButton').on('click', function(){
+            TargetNS.XAxisElementAdd($('#EditXAxisDialogAddAttribute').val());
+            return false;
+        });
+
+        $('#EditXAxisDialogField').on('click', '.DeleteButton', function(){
+            TargetNS.XAxisElementDelete($(this).parents('.XAxisElement').data('element'));
+            return false;
+        });
     };
 
 

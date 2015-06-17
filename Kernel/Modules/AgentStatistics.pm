@@ -334,6 +334,11 @@ sub EditScreen {
         );
     }
 
+    # X Axis
+    $Frontend{XAxisWidget} = $Self->{StatsViewObject}->XAxisWidget(
+        Stat => $Stat,
+    );
+
     my $Output = $LayoutObject->Header( Title => 'Edit' );
     $Output .= $LayoutObject->NavigationBar();
     $Output .= $LayoutObject->Output(
@@ -397,7 +402,7 @@ sub EditAction {
     my @Notify = $Self->{StatsObject}->CompletenessCheck(
         StatData => {
             %{$Stat},
-            \%Data
+            %Data,
         },
         Section => 'Specification'
     );
