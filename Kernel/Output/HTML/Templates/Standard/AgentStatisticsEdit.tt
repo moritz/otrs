@@ -28,8 +28,7 @@
     <div class="ContentColumn">
         <form action="[% Env("CGIHandle") %]" method="post" enctype="multipart/form-data" class="Validate">
             <input type="hidden" name="Action"    value="[% Env("Action") %]"/>
-            <input type="hidden" name="Subaction" value="Action"/>
-            <input type="hidden" name="Home"      value="EditSpecification"/>
+            <input type="hidden" name="Subaction" value="EditAction"/>
             <input type="hidden" name="StatID"    value="[% Data.StatID | html %]"/>
 
             [% IF Data.StatType == 'dynamic' %]

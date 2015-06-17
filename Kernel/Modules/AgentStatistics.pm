@@ -317,7 +317,7 @@ sub EditScreen {
     # get param
     if ( !( $Param{StatID} = $ParamObject->GetParam( Param => 'StatID' ) ) ) {
         return $LayoutObject->ErrorScreen(
-            Message => 'EditSpecification: Need StatID!',
+            Message => 'Need StatID!',
         );
     }
 
@@ -345,6 +345,79 @@ sub EditScreen {
     );
     $Output .= $LayoutObject->Footer();
     return $Output;
+}
+
+sub EditAction {
+    my ( $Self, %Param ) = @_;
+
+    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+    my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
+    my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
+
+    my %Errors;
+
+    my $Stat = $Self->{StatsObject}->StatsGet(
+        StatID => $ParamObject->GetParam( Param => 'StatID' ),
+    );
+    if ( !$Stat ) {
+        return $LayoutObject->ErrorScreen(
+            Message => 'Need StatID!',
+        );
+    }
+
+    my %Data;
+    for my $Key (qw(Title Description Valid)) {
+        $Data{$Key} = $ParamObject->GetParam( Param => $Key ) // '';
+        if ( !length $Data{$Key} ) {    # Valid can be 0
+            $Errors{ $Key . 'ServerError' } = 'ServerError';
+        }
+    }
+
+    for my $Key (qw(SumRow SumCol Cache ShowAsDashboardWidget)) {
+        $Data{$Key} = $ParamObject->GetParam( Param => $Key ) // '';
+    }
+
+    for my $Key (qw(Permission Format)) {
+        $Data{$Key} = [ $ParamObject->GetArray( Param => $Key ) ];
+        if ( !@{ $Data{$Key} } ) {
+            $Errors{ $Key . 'ServerError' } = 'ServerError';
+
+            #$Data{$Key} = '';
+        }
+    }
+
+    for my $Key (qw(GraphSize)) {
+        $Data{$Key} = [ $ParamObject->GetArray( Param => $Key ) ];
+
+        #if ( !@{ $Data{$Key} } ) {
+        #    $Data{$Key} = '';
+        #}
+    }
+
+    my @Notify = $Self->{StatsObject}->CompletenessCheck(
+        StatData => {
+            %{$Stat},
+            \%Data
+        },
+        Section => 'Specification'
+    );
+
+    if ( %Errors || @Notify ) {
+        return $Self->EditScreen(
+            Errors   => \%Errors,
+            GetParam => \%Data,
+        );
+    }
+
+    $Self->{StatsObject}->StatsUpdate(
+        StatID => $Stat->{StatID},
+        Hash   => \%Data,
+    );
+
+    return $Self->EditScreen(
+        Errors   => \%Errors,
+        GetParam => \%Data,
+    );
 }
 
 sub ViewScreen {
@@ -408,7 +481,7 @@ sub AddScreen {
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
 
     # In case of page reload because of errors
-    my %Errors = %{ $Param{Errors} // {} };
+    my %Errors   = %{ $Param{Errors}   // {} };
     my %GetParam = %{ $Param{GetParam} // {} };
 
     my %Frontend;
@@ -439,7 +512,7 @@ sub AddScreen {
     # This is a page reload because of validation errors
     if (%Errors) {
         $Frontend{GeneralSpecificationsWidget} = $Self->{StatsViewObject}->GeneralSpecificationsWidget(
-            Errors => \%Errors,
+            Errors   => \%Errors,
             GetParam => \%GetParam,
         );
         $Frontend{ShowFormInitially} = 1;
@@ -471,7 +544,7 @@ sub AddAction {
     my %Data;
     for my $Key (qw(Title Description ObjectModule StatType Valid)) {
         $Data{$Key} = $ParamObject->GetParam( Param => $Key ) // '';
-        if ( !length $Data{$Key} ) { # Valid can be 0
+        if ( !length $Data{$Key} ) {    # Valid can be 0
             $Errors{ $Key . 'ServerError' } = 'ServerError';
         }
     }
@@ -514,7 +587,7 @@ sub AddAction {
 
     if ( %Errors || @Notify ) {
         return $Self->AddScreen(
-            Errors => \%Errors,
+            Errors   => \%Errors,
             GetParam => \%Data,
         );
     }
@@ -539,7 +612,6 @@ sub AddAction {
     return $LayoutObject->Redirect(
         OP => "Action=AgentStatistics;Subaction=Edit;StatID=$Param{StatID}",
     );
-
 }
 
 sub RunAction {

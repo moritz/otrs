@@ -24,7 +24,7 @@
                         <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=Import" class="CallForAction Fullsize Center"><span><i class="fa fa-upload"></i> [% Translate("Import") | html %]</span></a>
                     </li>
                     [% ELSE %]
-<!-- placeholder action for readonly view -->
+#                   <!-- placeholder action for readonly view -->
                     <li>
                         <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=Overview" class="CallForAction Fullsize Center"><span><i class="fa fa-caret-left"></i> [% Translate("Go to overview") | html %]</span></a>
                     </li>
@@ -78,46 +78,46 @@
                     </thead>
                     <tbody>
 [% RenderBlockStart("Result") %]
-                        <tr>
-                            <td>
+                        <tr[% IF !Data.Valid %] class="Invalid"[% END %]>
+                        <td>
                                 [% IF Data.AccessRw %]
-                                <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=Edit;StatID=[% Data.StatID | uri %]" class="AsBlock" title="[% Translate('Edit statistic "%s".', Data.Title) | html %]">
+                            <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=Edit;StatID=[% Data.StatID | uri %]" class="AsBlock" title="[% Translate('Edit statistic "%s".', Data.Title) | html %]">
                                     [% Data.StatNumber | html %]
 
-                                </a>
+                            </a>
                                 [% ELSE %]
                                     [% Data.StatNumber | html %]
                                 [% END %]
-                            </td>
-                            <td>[% Data.Title | html %]</td>
-                            <td>[% Translate(Data.ObjectName) | html %]</td>
+                        </td>
+                        <td>[% Data.Title | html %]</td>
+                        <td>[% Translate(Data.ObjectName) | html %]</td>
                             [% IF Data.AccessRw %]
-                            <td class="Center" title="[% Translate('Export statistic "%s"', Data.Title) | html %]">
-                                <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=ExportAction;StatID=[% Data.StatID | uri %];[% Env('ChallengeTokenParam') %]" class="AsBlock">
-                                    <i class="fa fa-download"></i>
-                                    <span class="InvisibleText">[% Translate('Export statistic %s', Data.Title) | html %]</span>
-                                </a>
-                            </td>
-                            <td class="Center" title="[% Translate('Delete statistic "%s"', Data.Title) | html %]">
-                                <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=DeleteAction;StatID=[% Data.StatID | uri %];[% Env('ChallengeTokenParam') %]" class="AsBlock StatDelete" data-stat-title="[% Data.Title | html %]">
-                                    <i class="fa fa-trash"></i>
-                                    <span class="InvisibleText">[% Translate('Delete statistic %s', Data.Title) | html %]</span>
-                                </a>
-                            </td>
+                        <td class="Center" title="[% Translate('Export statistic "%s"', Data.Title) | html %]">
+                            <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=ExportAction;StatID=[% Data.StatID | uri %];[% Env('ChallengeTokenParam') %]" class="AsBlock">
+                                <i class="fa fa-download"></i>
+                                <span class="InvisibleText">[% Translate('Export statistic %s', Data.Title) | html %]</span>
+                            </a>
+                        </td>
+                        <td class="Center" title="[% Translate('Delete statistic "%s"', Data.Title) | html %]">
+                            <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=DeleteAction;StatID=[% Data.StatID | uri %];[% Env('ChallengeTokenParam') %]" class="AsBlock StatDelete" data-stat-title="[% Data.Title | html %]">
+                                <i class="fa fa-trash"></i>
+                                <span class="InvisibleText">[% Translate('Delete statistic %s', Data.Title) | html %]</span>
+                            </a>
+                        </td>
                             [% END %]
-                            <td class="Center">
-                                <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=View;StatID=[% Data.StatID | uri %]" class="AsBlock">
-                                    <i class="fa fa-caret-square-o-right"></i>
+                        <td class="Center">
+                            <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=View;StatID=[% Data.StatID | uri %]" class="AsBlock">
+                                <i class="fa fa-caret-square-o-right"></i>
                                     [% Translate('Run now') | html %]
-                                </a>
-                            </td>
-                        </tr>
+                            </a>
+                        </td>
+                    </tr>
 [% RenderBlockEnd("Result") %]
-                    </tbody>
-                </table>
-            </div>
+                </tbody>
+            </table>
         </div>
     </div>
+</div>
 </div>
 
 [% WRAPPER JSOnDocumentComplete %]
