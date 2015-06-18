@@ -122,6 +122,7 @@ Core.Agent.Statistics = (function (TargetNS) {
                 $FormFieldsElement.find('input:not(:checked)').removeAttr('checked');
                 $FormFieldsElement.find('input:checked').attr('checked', 'checked');
                 Core.UI.Dialog.CloseDialog($('.Dialog'));
+                $('form').submit();
             }
 
             function EditDialogCancel() {

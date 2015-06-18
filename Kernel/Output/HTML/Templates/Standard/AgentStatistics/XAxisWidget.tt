@@ -13,11 +13,11 @@
 [% RenderBlockStart("MultiSelectField") %]
         <label>
             <input type="hidden" name="XAxisSelectedElement" value="[% Data.Element | html %]" [% Data.Checked %]/>
-                            [% Translate(Data.Name) | html %]:
+            [% Translate(Data.Name) | html %]:
         </label>
         <div class="Field">
             <div>
-                                [% Data.SelectField %]
+                [% Data.SelectField %]
             </div>
             <div>
                 <input type="checkbox" name="Fixed[% Data.Element | html %]" id="Fixed[% Data.Element | html %]" value="1" [% Data.Fixed %] />
@@ -30,42 +30,42 @@
 [% RenderBlockStart("TimeExtended") %]
         <label>
             <input type="hidden" name="XAxisSelectedElement" value="[% Data.Element | html %]" [% Data.Checked %]/>
-                            [% Translate(Data.Name) | html %]:
+            [% Translate(Data.Name) | html %]:
         </label>
         <div class="Field">
             <fieldset class="TableLike FixedLabel">
                 <label>
                     <input type="radio" name="[% Data.Element | html %]TimeSelect" value="Absolut" [% Data.CheckedAbsolut | html %]/>
-                                    [% Translate("Absolute Period") | html %]:
+                    [% Translate("Absolute Period") | html %]:
                 </label>
                 <div class="Field">
-                                    [% Translate("Between") | html %] [% Data.TimeStart %] [% Translate("and") | html %] [% Data.TimeStop %]
+                    [% Translate("Between") | html %] [% Data.TimeStart %] [% Translate("and") | html %] [% Data.TimeStop %]
                 </div>
                 <div class="Clear"></div>
 
                 <label>
                     <input type="radio" name="[% Data.Element | html %]TimeSelect" value="Relativ" [% Data.CheckedRelative | html %]/>
-                                    [% Translate("Relative Period") | html %]:
+                    [% Translate("Relative Period") | html %]:
                 </label>
                 <div class="Field">
-                                    [% Translate("The last") | html %]
-                                    [% Data.TimeRelativeCount %]
-                                    [% Data.TimeRelativeUnit %] ([% Translate("maximal period") | html %])
+                    [% Translate("The last") | html %]
+                    [% Data.TimeRelativeCount %]
+                    [% Data.TimeRelativeUnit %] ([% Translate("maximal period") | html %])
                 </div>
                 <div class="Clear"></div>
 
                 <label>[% Translate("Scale") | html %]:</label>
                 <div class="Field">
-                                    [% Translate("minimal") | html %]
-                                    [% Data.TimeScaleCount %]
-                                    [% Data.TimeScaleUnit %] ([% Translate("minimal scale") | html %])
+                    [% Translate("minimal") | html %]
+                    [% Data.TimeScaleCount %]
+                    [% Data.TimeScaleUnit %] ([% Translate("minimal scale") | html %])
                 </div>
                 <div class="Clear"></div>
 
                 <div class="Field">
                     <label>
                         <input type="checkbox" name="Fixed[% Data.Element %]" value="1" [% Data.Fixed %]/>
-                                        [% Translate("Fixed") | html %]
+                        [% Translate("Fixed") | html %]
                     </label>
                     <a class="DeleteButton" href="#"><i class="fa fa-minus-square-o"></i><span class="InvisibleText">[% Translate("Delete") | html %]</span></a>
                 </div>
@@ -78,22 +78,22 @@
 [% RenderBlockStart("Time") %]
         <label>
             <input type="hidden" name="XAxisSelectedElement" value="[% Data.Element | html %]" [% Data.Checked %]/>
-                            [% Translate(Data.Name) | html %]:
+            [% Translate(Data.Name) | html %]:
         </label>
         <div class="Field">
             <div>
-                                [% Translate("Between") | html %]
-                                [% Data.TimeStart %] [% Translate("and") | html %] [% Data.TimeStop %]
+                [% Translate("Between") | html %]
+                [% Data.TimeStart %] [% Translate("and") | html %] [% Data.TimeStop %]
             </div>
             <div class="SpacingTopSmall">
-                                [% Translate("Scale") | html %]:
-                                [% Data.TimeSelectField %]
+                [% Translate("Scale") | html %]:
+                [% Data.TimeSelectField %]
                 <p class="FieldExplanation">[% Translate("Please select only one element or turn off the button 'Fixed'.") | html %]</p>
             </div>
             <div>
                 <label>
                     <input type="checkbox" name="Fixed[% Data.Element %]" value="1" [% Data.Fixed %]/>
-                                    [% Translate("Fixed") | html %]
+                    [% Translate("Fixed") | html %]
                 </label>
                 <a class="DeleteButton" href="#"><i class="fa fa-minus-square-o"></i><span class="InvisibleText">[% Translate("Delete") | html %]</span></a>
             </div>

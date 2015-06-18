@@ -370,6 +370,9 @@ sub EditAction {
         );
     }
 
+    #
+    # General Specification
+    #
     my %Data;
     for my $Key (qw(Title Description Valid)) {
         $Data{$Key} = $ParamObject->GetParam( Param => $Key ) // '';
@@ -397,6 +400,90 @@ sub EditAction {
         #if ( !@{ $Data{$Key} } ) {
         #    $Data{$Key} = '';
         #}
+    }
+
+    #
+    # X Axis
+    #
+    if ( $Stat->{StatType} eq 'dynamic' ) {
+        my $SelectedElement = $ParamObject->GetParam( Param => 'XAxisSelectedElement' );
+        $Data{StatType} = $Stat->{StatType};
+
+        OBJECTATTRIBUTE:
+        for my $ObjectAttribute ( @{ $Stat->{UseAsXvalue} } ) {
+            next OBJECTATTRIBUTE if !defined $SelectedElement;
+            next OBJECTATTRIBUTE if $SelectedElement ne 'XAxis' . $ObjectAttribute->{Element};
+
+            my @Array = $ParamObject->GetArray( Param => $SelectedElement );
+            $Data{UseAsXvalue}[0]{SelectedValues} = \@Array;
+            $Data{UseAsXvalue}[0]{Element}        = $ObjectAttribute->{Element};
+            $Data{UseAsXvalue}[0]{Block}          = $ObjectAttribute->{Block};
+            $Data{UseAsXvalue}[0]{Selected}       = 1;
+
+            my $Fixed = $ParamObject->GetParam( Param => 'Fixed' . $SelectedElement );
+            $Data{UseAsXvalue}[0]{Fixed} = $Fixed ? 1 : 0;
+
+            # Check if Time was selected
+            next OBJECTATTRIBUTE if $ObjectAttribute->{Block} ne 'Time';
+
+            # This part is only needed if the block time is selected
+            # perhaps a separate function is better
+            my $TimeType = $ConfigObject->Get('Stats::TimeType') || 'Normal';
+            my %Time;
+            $Data{UseAsXvalue}[0]{TimeScaleCount}
+                = $ParamObject->GetParam( Param => $SelectedElement . 'TimeScaleCount' )
+                || 1;
+            my $TimeSelect = $ParamObject->GetParam( Param => $SelectedElement . 'TimeSelect' )
+                || 'Absolut';
+
+            if ( $TimeSelect eq 'Absolut' ) {
+                for my $Limit (qw(Start Stop)) {
+                    for my $Unit (qw(Year Month Day Hour Minute Second)) {
+                        if ( defined( $ParamObject->GetParam( Param => "$SelectedElement$Limit$Unit" ) ) ) {
+                            $Time{ $Limit . $Unit } = $ParamObject->GetParam(
+                                Param => "$SelectedElement$Limit$Unit",
+                            );
+                        }
+                    }
+                    if ( !defined( $Time{ $Limit . 'Hour' } ) ) {
+                        if ( $Limit eq 'Start' ) {
+                            $Time{StartHour}   = 0;
+                            $Time{StartMinute} = 0;
+                            $Time{StartSecond} = 0;
+                        }
+                        elsif ( $Limit eq 'Stop' ) {
+                            $Time{StopHour}   = 23;
+                            $Time{StopMinute} = 59;
+                            $Time{StopSecond} = 59;
+                        }
+                    }
+                    elsif ( !defined( $Time{ $Limit . 'Second' } ) ) {
+                        if ( $Limit eq 'Start' ) {
+                            $Time{StartSecond} = 0;
+                        }
+                        elsif ( $Limit eq 'Stop' ) {
+                            $Time{StopSecond} = 59;
+                        }
+                    }
+
+                    $Data{UseAsXvalue}[0]{"Time$Limit"} = sprintf(
+                        "%04d-%02d-%02d %02d:%02d:%02d",
+                        $Time{ $Limit . 'Year' },
+                        $Time{ $Limit . 'Month' },
+                        $Time{ $Limit . 'Day' },
+                        $Time{ $Limit . 'Hour' },
+                        $Time{ $Limit . 'Minute' },
+                        $Time{ $Limit . 'Second' },
+                    );
+                }
+            }
+            else {
+                $Data{UseAsXvalue}[0]{TimeRelativeUnit}
+                    = $ParamObject->GetParam( Param => $SelectedElement . 'TimeRelativeUnit' );
+                $Data{UseAsXvalue}[0]{TimeRelativeCount}
+                    = $ParamObject->GetParam( Param => $SelectedElement . 'TimeRelativeCount' );
+            }
+        }
     }
 
     my @Notify = $Self->{StatsObject}->CompletenessCheck(

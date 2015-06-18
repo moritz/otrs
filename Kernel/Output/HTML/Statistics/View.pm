@@ -818,7 +818,7 @@ sub XAxisWidget {
         if ( $ObjectAttribute->{Block} eq 'MultiSelectField' ) {
             $BlockData{SelectField} = $LayoutObject->BuildSelection(
                 Data     => $ObjectAttribute->{Values},
-                Name     => $ObjectAttribute->{Element},
+                Name     => 'XAxis' . $ObjectAttribute->{Element},
                 Multiple => 1,
                 Size     => 5,
                 Class =>
@@ -843,7 +843,7 @@ sub XAxisWidget {
         }
 
         $BlockData{Name}    = $ObjectAttribute->{Name};
-        $BlockData{Element} = $ObjectAttribute->{Element};
+        $BlockData{Element} = 'XAxis' . $ObjectAttribute->{Element};
 
         # show the attribute block
         $LayoutObject->Block(
@@ -860,7 +860,11 @@ sub XAxisWidget {
                 $ObjectAttribute->{Block} = 'TimeExtended';
             }
 
-            my %TimeData = _Timeoutput( $Self, %{$ObjectAttribute} );
+            my %TimeData = _Timeoutput(
+                $Self,
+                %{$ObjectAttribute},
+                Element => $BlockData{Element},
+            );
             %BlockData = ( %BlockData, %TimeData );
         }
 
