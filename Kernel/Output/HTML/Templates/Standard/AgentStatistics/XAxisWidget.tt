@@ -6,18 +6,20 @@
 # did not receive this file, see http://www.gnu.org/licenses/agpl.txt.
 # --
 
-<div id="EditXAxisDialogTemplate" class="Hidden">
+<div id="EditDialogTemplate" class="Hidden">
     <div class="Fields"></div>
-    <div class="Add">
-        <select></select>
-        <a class="AddButton" href="#"><i class="fa fa-plus-square-o"></i><span class="InvisibleText">[% Translate("Add") | html %]</span></a>
-    </div>
+    <fieldset class="TableLike Add">
+        <div class="Value">
+            <select></select>
+            <a class="AddButton" href="#"><i class="fa fa-plus-square-o"></i><span class="InvisibleText">[% Translate("Add") | html %]</span></a>
+        </div>
+    </fieldset>
 </div>
 
-<div id="XAxisWidgetContainer" class="Hidden">
+<div id="XAxisContainer" class="Hidden">
 
 [% RenderBlockStart("Attribute") %]
-    <fieldset class="TableLike XAxisElement XAxisElement[% Data.Element | html %]" data-element="[% Data.Element | html %]">
+    <fieldset class="TableLike Element Element[% Data.Element | html %]" data-element="[% Data.Element | html %]">
 [% RenderBlockStart("MultiSelectField") %]
         <label>
             <input type="hidden" name="XAxisSelectedElement" value="[% Data.Element | html %]" [% Data.Checked %]/>
@@ -112,7 +114,7 @@
 [% IF Data.Checked %]
 [% WRAPPER JSOnDocumentComplete %]
 <script type="text/javascript">
-    Core.Agent.Statistics.XAxisElementAdd('[% Data.Element | html %]');
+    Core.Agent.Statistics.ElementAdd('XAxis', '[% Data.Element | html %]');
 </script>
 [% END %]
 [% END %]
