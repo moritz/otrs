@@ -830,9 +830,6 @@ sub XAxisWidget {
                 TreeView       => $ObjectAttribute->{TreeView} || 0,
                 Sort           => $ObjectAttribute->{Sort} || undef,
                 SortIndividual => $ObjectAttribute->{SortIndividual} || undef,
-                OnChange =>
-                    "Core.Agent.Stats.SelectRadiobutton('$ObjectAttribute->{Element}', 'Select')",
-
             );
 
             if ( $ObjectAttribute->{ShowAsTree} && $ObjectAttribute->{IsDynamicField} ) {

@@ -58,39 +58,9 @@ Core.Agent.Statistics = (function (TargetNS) {
         });
     };
 
-    function RebuildEditXAxisDialogAddSelection() {
-        $('#EditXAxisDialogAddAttribute').empty();
-        $.each($('#XAxisWidgetContainer .XAxisElement'), function() {
-            var $XAxisElement = $(this),
-                $Option = $($.parseHTML('<option></option>'));
-
-            $Option.val($XAxisElement.data('element'))
-                .text($XAxisElement.find('> label').text())
-                .appendTo('#EditXAxisDialogAddAttribute');
-
-        });
-    }
-
-    function RefreshEditXAxisDialogContent() {
-        RebuildEditXAxisDialogAddSelection();
-        if ($('#EditXAxisDialogField').children().length) {
-            $('#EditXAxisDialogAdd').hide();
-        }
-        else {
-            $('#EditXAxisDialogAdd').show();
-        }
-    }
-
     TargetNS.XAxisElementAdd = function(ElementName) {
-        var $Element = $('#XAxisWidgetContainer #XAxisElement' + ElementName);
-        $Element.appendTo($('#EditXAxisDialogField'));
-        RefreshEditXAxisDialogContent();
-    };
-
-    TargetNS.XAxisElementDelete = function(ElementName) {
-        var $Element = $('#EditXAxisDialogField #XAxisElement' + ElementName);
-        $Element.appendTo($('#XAxisWidgetContainer'));
-        RefreshEditXAxisDialogContent();
+        var $Element = $('#XAxisWidgetContainer .XAxisElement' + ElementName);
+        $Element.clone().appendTo($('#XAxisFormFields'));
     };
 
     /**
@@ -98,35 +68,93 @@ Core.Agent.Statistics = (function (TargetNS) {
      * @memberof Core.Agent.Statistics
      * @function
      * @description
-     *      Initialize the add screen. Contains basically some logic to react on which
-     *      of the big select buttons the agent uses. Afterwards, the specification widget
-     *      is being loaded according to the clicked button.
+     *      Initialize the edit screen.
      */
     TargetNS.InitEditScreen = function () {
         $('button.EditXAxis').on('click', function() {
-            function XAxisEditDialogClose() {
-                $('#EditXAxisDialogTemplateContent').appendTo('#EditXAxisDialogTemplate');
-                RefreshEditXAxisDialogContent();
+
+            function RebuildEditXAxisDialogAddSelection() {
+                $('#EditXAxisDialog .Add select').empty();
+                $.each($('#XAxisWidgetContainer .XAxisElement'), function() {
+                    var $XAxisElement = $(this),
+                        $Option = $($.parseHTML('<option></option>')),
+                        ElementName = $XAxisElement.data('element');
+
+                    if ($('#EditXAxisDialog .Fields .XAxisElement' + ElementName).length) {
+                        return;
+                    }
+
+                    $Option.val(ElementName)
+                        .text($XAxisElement.find('> label').text())
+                        .appendTo('#EditXAxisDialog .Add select');
+                });
+            }
+
+            function EditXAxisDialogAdd(ElementName) {
+                var $Element = $('#XAxisWidgetContainer .XAxisElement' + ElementName);
+                $Element.clone().appendTo($('#EditXAxisDialog .Fields'));
+                $('#EditXAxisDialog .Add').hide();
+            }
+
+            function EditXAxisDialogDelete(ElementName) {
+                $('#EditXAxisDialog .Fields .XAxisElement' + ElementName).remove();
+                $('#EditXAxisDialog .Add').show();
+                RebuildEditXAxisDialogAddSelection();
+            }
+
+            function EditXAxisDialogSave() {
+                $('#XAxisFormFields').empty();
+                $('#EditXAxisDialog .Fields').children().appendTo('#XAxisFormFields');
+                // Cloning does not clone the selected state, only the "selected" HTML attribute.
+                // Therefore we need to make sure that the attribute matches the current state
+                //  so that we can clone the fields later again for use in the dialog.
+                $('#XAxisFormFields option:not(:selected)').removeAttr('selected');
+                $('#XAxisFormFields option:selected').attr('selected', 'selected');
+                $('#XAxisFormFields input:not(:checked)').removeAttr('checked');
+                $('#XAxisFormFields input:checked').attr('checked', 'checked');
                 Core.UI.Dialog.CloseDialog($('.Dialog'));
             }
-            RefreshEditXAxisDialogContent();
-            Core.UI.Dialog.ShowContentDialog('<div id="XAxisEdit" style="max-height: 500px; overflow: auto;"></div>', '123', 100, 100, true, [{Label: "Apply", Type: 'Close', Function: XAxisEditDialogClose}], false);
-            $('#EditXAxisDialogTemplateContent').appendTo('#XAxisEdit');
 
-            return false;
-        });
+            function EditXAxisDialogCancel() {
+                Core.UI.Dialog.CloseDialog($('.Dialog'));
+            }
 
-        $('#EditXAxisDialogAdd .AddButton').on('click', function(){
-            TargetNS.XAxisElementAdd($('#EditXAxisDialogAddAttribute').val());
-            return false;
-        });
+            Core.UI.Dialog.ShowContentDialog(
+                '<div id="EditXAxisDialog" style="max-height: 500px; width: 600px; overflow: auto;"></div>',
+                '123',
+                100,
+                'Center',
+                true,
+                [
+                    { Label: "Save", Class: 'Primary', Type: 'Close', Function: EditXAxisDialogSave },
+                    { Label: "Cancel", Class: '', Type: 'Close', Function: EditXAxisDialogCancel }
+                ],
+                false
+            );
+            $('#EditXAxisDialogTemplate').children().clone().appendTo('#EditXAxisDialog');
 
-        $('#EditXAxisDialogField').on('click', '.DeleteButton', function(){
-            TargetNS.XAxisElementDelete($(this).parents('.XAxisElement').data('element'));
+            if ($('#XAxisFormFields').children().length) {
+                $('#EditXAxisDialog .Add').hide();
+                $('#XAxisFormFields').children().clone().appendTo('#EditXAxisDialog .Fields');
+            }
+            else {
+                $('#EditXAxisDialog .Add').show();
+            }
+            RebuildEditXAxisDialogAddSelection();
+
+            $('#EditXAxisDialog .Add .AddButton').on('click', function(){
+                EditXAxisDialogAdd($('#EditXAxisDialog .Add select').val());
+                return false;
+            });
+
+            $('#EditXAxisDialog .Fields').on('click', '.DeleteButton', function(){
+                EditXAxisDialogDelete($(this).parents('.XAxisElement').data('element'));
+                return false;
+            });
+
             return false;
         });
     };
-
 
     return TargetNS;
 }(Core.Agent.Statistics || {}));

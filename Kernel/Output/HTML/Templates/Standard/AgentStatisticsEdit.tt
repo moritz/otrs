@@ -44,17 +44,7 @@
                     [% Data.PreviewContainer %]
 
                     <button type="button" class="CallForAction EditXAxis Bottom"><span>Edit X-Axis</span></button>
-                    <div id="EditXAxisDialogTemplate" class="Hidden">
-                        <div id="EditXAxisDialogTemplateContent">
-                            <div id="EditXAxisDialogField">
-                            </div>
-                            <div id="EditXAxisDialogAdd">
-                                <select id="EditXAxisDialogAddAttribute">
-                                </select>
-                                <a class="AddButton" href="#"><i class="fa fa-plus-square-o"></i><span class="InvisibleText">[% Translate("Add") | html %]</span></a>
-                            </div>
-                        </div>
-                    </div>
+                    <div id="XAxisFormFields"></div>
                     <button type="button" class="CallForAction EditYAxis Left"><span>Edit Y-Axis</span></button>
                     <button type="button" class="CallForAction EditRestrictions Right"><span>Edit Restrictions</span></button>
                 </div>
