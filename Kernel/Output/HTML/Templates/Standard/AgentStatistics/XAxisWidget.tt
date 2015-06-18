@@ -6,16 +6,6 @@
 # did not receive this file, see http://www.gnu.org/licenses/agpl.txt.
 # --
 
-<div id="EditDialogTemplate" class="Hidden">
-    <div class="Fields"></div>
-    <fieldset class="TableLike Add">
-        <div class="Value">
-            <select></select>
-            <a class="AddButton" href="#"><i class="fa fa-plus-square-o"></i><span class="InvisibleText">[% Translate("Add") | html %]</span></a>
-        </div>
-    </fieldset>
-</div>
-
 <div id="XAxisContainer" class="Hidden">
 
 [% RenderBlockStart("Attribute") %]

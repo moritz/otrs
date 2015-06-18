@@ -46,12 +46,22 @@
                     <button type="button"
                         class="CallForAction EditXAxis Bottom"
                         data-configuration-type="XAxis"
-                        data-configuration-limit="2">
+                        data-configuration-limit="1"
+                        data-dialog-title="[% Translate('Configure X-Axis') | html %]">
                         <span>Edit X-Axis</span>
                     </button>
-                    <div id="XAxisFormFields"></div>
+                    <div id="XAxisFormFields" class="Hidden"></div>
                     <button type="button" class="CallForAction EditYAxis Left"><span>Edit Y-Axis</span></button>
                     <button type="button" class="CallForAction EditRestrictions Right"><span>Edit Restrictions</span></button>
+                    <div id="EditDialogTemplate" class="Hidden">
+                        <div class="Fields"></div>
+                        <fieldset class="TableLike Add">
+                            <div class="Value">
+                                <select></select>
+                                <a class="AddButton" href="#"><i class="fa fa-plus-square-o"></i><span class="InvisibleText">[% Translate("Add") | html %]</span></a>
+                            </div>
+                        </fieldset>
+                    </div>
                 </div>
             </div>
             [% END %]
@@ -98,6 +108,8 @@
 </div>
 [% WRAPPER JSOnDocumentComplete %]
 <script type="text/javascript">//<![CDATA[
+Core.Config.Set('Translation.Save', [% Translate('Save') | JSON %]);
+Core.Config.Set('Translation.Cancel', [% Translate('Cancel') | JSON %]);
 Core.Agent.Statistics.InitEditScreen();
 //]]></script>
 [% END %]

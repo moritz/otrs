@@ -76,6 +76,7 @@ Core.Agent.Statistics = (function (TargetNS) {
         $('button.EditXAxis').on('click', function() {
             var ConfigurationType  = $(this).data('configuration-type'),
                 ConfigurationLimit = $(this).data('configuration-limit'),
+                DialogTitle        = $(this).data('dialog-title'),
                 $ContainerElement  = $('#' + ConfigurationType + 'Container'),
                 $FormFieldsElement = $('#' + ConfigurationType + 'FormFields');
 
@@ -129,13 +130,13 @@ Core.Agent.Statistics = (function (TargetNS) {
 
             Core.UI.Dialog.ShowContentDialog(
                 '<div id="EditDialog" style="max-height: 800px; width: 600px; overflow: auto;"></div>',
-                '123',
+                DialogTitle,
                 100,
                 'Center',
                 true,
                 [
-                    { Label: "Save", Class: 'Primary', Type: 'Close', Function: EditDialogSave },
-                    { Label: "Cancel", Class: '', Type: 'Close', Function: EditDialogCancel }
+                    { Label: Core.Config.Get('Translation.Save'), Class: 'Primary', Type: 'Close', Function: EditDialogSave },
+                    { Label: Core.Config.Get('Translation.Cancel'), Class: '', Type: 'Close', Function: EditDialogCancel }
                 ],
                 true
             );
