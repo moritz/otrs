@@ -73,7 +73,7 @@ Core.Agent.Statistics = (function (TargetNS) {
      *      Initialize the edit screen.
      */
     TargetNS.InitEditScreen = function () {
-        $('button.EditXAxis').on('click', function() {
+        $('button.EditXAxis, button.EditYAxis').on('click', function() {
             var ConfigurationType  = $(this).data('configuration-type'),
                 ConfigurationLimit = $(this).data('configuration-limit'),
                 DialogTitle        = $(this).data('dialog-title'),

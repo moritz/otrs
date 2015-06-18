@@ -332,12 +332,14 @@ sub EditScreen {
         $Frontend{PreviewContainer} = $Self->{StatsViewObject}->PreviewContainer(
             Stat => $Stat,
         );
-    }
 
-    # X Axis
-    $Frontend{XAxisWidget} = $Self->{StatsViewObject}->XAxisWidget(
-        Stat => $Stat,
-    );
+        $Frontend{XAxisWidget} = $Self->{StatsViewObject}->XAxisWidget(
+            Stat => $Stat,
+        );
+        $Frontend{YAxisWidget} = $Self->{StatsViewObject}->YAxisWidget(
+            Stat => $Stat,
+        );
+    }
 
     my $Output = $LayoutObject->Header( Title => 'Edit' );
     $Output .= $LayoutObject->NavigationBar();

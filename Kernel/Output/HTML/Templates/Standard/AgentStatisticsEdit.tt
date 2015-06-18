@@ -48,11 +48,21 @@
                         data-configuration-type="XAxis"
                         data-configuration-limit="1"
                         data-dialog-title="[% Translate('Configure X-Axis') | html %]">
-                        <span>Edit X-Axis</span>
+                        <span>[% Translate('Edit X-Axis') | html %]</span>
                     </button>
                     <div id="XAxisFormFields" class="Hidden"></div>
-                    <button type="button" class="CallForAction EditYAxis Left"><span>Edit Y-Axis</span></button>
+
+                    <button type="button"
+                        class="CallForAction EditYAxis Left"
+                        data-configuration-type="YAxis"
+                        data-configuration-limit="2"
+                        data-dialog-title="[% Translate('Configure Y-Axis') | html %]">
+                        <span>[% Translate('Edit Y-Axis') | html %]</span>
+                    </button>
+                    <div id="YAxisFormFields" class=""></div>
+
                     <button type="button" class="CallForAction EditRestrictions Right"><span>Edit Restrictions</span></button>
+
                     <div id="EditDialogTemplate" class="Hidden">
                         <div class="Fields"></div>
                         <fieldset class="TableLike Add">
@@ -104,6 +114,7 @@
         </form>
 #       <!-- append after form to avoid element submit -->
         [% Data.XAxisWidget %]
+        [% Data.YAxisWidget %]
     </div>
 </div>
 [% WRAPPER JSOnDocumentComplete %]
