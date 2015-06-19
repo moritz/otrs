@@ -1007,7 +1007,121 @@ sub YAxisWidget {
         },
     );
     return $Output;
+}
 
+
+sub RestrictionsWidget {
+    my ( $Self, %Param ) = @_;
+
+    my $Stat = $Param{Stat};
+
+    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+
+    #my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
+    my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
+
+    for my $ObjectAttribute ( @{ $Stat->{UseAsRestriction} } ) {
+        my %BlockData;
+        $BlockData{Fixed}   = 'checked="checked"';
+        $BlockData{Checked} = '';
+
+        if ( $ObjectAttribute->{Selected} ) {
+            $BlockData{Checked} = 'checked="checked"';
+            if ( !$ObjectAttribute->{Fixed} ) {
+                $BlockData{Fixed} = "";
+            }
+        }
+
+        if ( $ObjectAttribute->{SelectedValues} ) {
+            $BlockData{SelectedValue} = $ObjectAttribute->{SelectedValues}[0];
+        }
+        else {
+            $BlockData{SelectedValue} = '';
+            $ObjectAttribute->{SelectedValues} = undef;
+        }
+
+        if (
+            $ObjectAttribute->{Block} eq 'MultiSelectField'
+            || $ObjectAttribute->{Block} eq 'SelectField'
+            )
+        {
+            $BlockData{SelectField} = $LayoutObject->BuildSelection(
+                Data     => $ObjectAttribute->{Values},
+                Name     => 'Restrictions' . $ObjectAttribute->{Element},
+                Multiple => 1,
+                Size     => 5,
+                Class =>
+                    ( $ObjectAttribute->{ShowAsTree} && $ObjectAttribute->{IsDynamicField} )
+                ? 'DynamicFieldWithTreeView'
+                : '',
+                SelectedID     => $ObjectAttribute->{SelectedValues},
+                Translation    => $ObjectAttribute->{Translation},
+                TreeView       => $ObjectAttribute->{TreeView} || 0,
+                Sort           => $ObjectAttribute->{Sort} || undef,
+                SortIndividual => $ObjectAttribute->{SortIndividual} || undef,
+            );
+
+            if ( $ObjectAttribute->{ShowAsTree} && $ObjectAttribute->{IsDynamicField} ) {
+                my $TreeSelectionMessage = $LayoutObject->{LanguageObject}->Translate("Show Tree Selection");
+                $BlockData{SelectField}
+                    .= ' <a href="#" title="'
+                    . $TreeSelectionMessage
+                    . '" class="ShowTreeSelection"><span>'
+                    . $TreeSelectionMessage . '</span><i class="fa fa-sitemap"></i></a>';
+            }
+        }
+
+        $BlockData{Element} = 'Restrictions' . $ObjectAttribute->{Element};
+        $BlockData{Name}    = $ObjectAttribute->{Name};
+
+        # stop word check
+        my %StopWordFields = $Self->_StopWordFieldsGet();
+        if ( $StopWordFields{ $ObjectAttribute->{Name} } ) {
+            my %StopWordsServerErrors = $Self->_StopWordsServerErrorsGet(
+                $ObjectAttribute->{Name} => $BlockData{SelectedValue},
+            );
+
+            if ( $StopWordsServerErrors{ $ObjectAttribute->{Name} . 'Invalid' } ) {
+                $BlockData{Invalid} = $StopWordsServerErrors{ $ObjectAttribute->{Name} . 'Invalid' };
+
+                if ( $StopWordsServerErrors{ $ObjectAttribute->{Name} . 'InvalidTooltip' } ) {
+                    $BlockData{InvalidTooltip}
+                        = $StopWordsServerErrors{ $ObjectAttribute->{Name} . 'InvalidTooltip' };
+                }
+            }
+        }
+
+        # show the attribute block
+        $LayoutObject->Block(
+            Name => 'Attribute',
+            Data => \%BlockData,
+        );
+        if ( $ObjectAttribute->{Block} eq 'Time' ) {
+            my $TimeType = $ConfigObject->Get('Stats::TimeType') || 'Normal';
+            $ObjectAttribute->{Block} = $TimeType eq 'Normal' ? 'Time' : 'TimeExtended';
+
+            my %TimeData = _Timeoutput(
+                $Self,
+                %{$ObjectAttribute},
+                Element => $BlockData{Element},
+            );
+            %BlockData = ( %BlockData, %TimeData );
+        }
+
+        # show the input element
+        $LayoutObject->Block(
+            Name => $ObjectAttribute->{Block},
+            Data => \%BlockData,
+        );
+    }
+
+    my $Output .= $LayoutObject->Output(
+        TemplateFile => 'AgentStatistics/RestrictionsWidget',
+        Data         => {
+            %{$Stat},
+        },
+    );
+    return $Output;
 }
 
 sub PreviewContainer {

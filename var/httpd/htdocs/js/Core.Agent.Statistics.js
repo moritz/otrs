@@ -73,7 +73,7 @@ Core.Agent.Statistics = (function (TargetNS) {
      *      Initialize the edit screen.
      */
     TargetNS.InitEditScreen = function () {
-        $('button.EditXAxis, button.EditYAxis').on('click', function() {
+        $('button.EditXAxis, button.EditYAxis, button.EditRestrictions').on('click', function() {
             var ConfigurationType  = $(this).data('configuration-type'),
                 ConfigurationLimit = $(this).data('configuration-limit'),
                 DialogTitle        = $(this).data('dialog-title'),
@@ -136,7 +136,7 @@ Core.Agent.Statistics = (function (TargetNS) {
                 'Center',
                 true,
                 [
-                    { Label: Core.Config.Get('Translation.Save'), Class: 'Primary', Type: 'Close', Function: EditDialogSave },
+                    { Label: Core.Config.Get('Translation.Save'), Class: 'Primary', Type: '', Function: EditDialogSave },
                     { Label: Core.Config.Get('Translation.Cancel'), Class: '', Type: 'Close', Function: EditDialogCancel }
                 ],
                 true

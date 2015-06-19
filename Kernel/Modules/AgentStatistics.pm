@@ -332,11 +332,13 @@ sub EditScreen {
         $Frontend{PreviewContainer} = $Self->{StatsViewObject}->PreviewContainer(
             Stat => $Stat,
         );
-
         $Frontend{XAxisWidget} = $Self->{StatsViewObject}->XAxisWidget(
             Stat => $Stat,
         );
         $Frontend{YAxisWidget} = $Self->{StatsViewObject}->YAxisWidget(
+            Stat => $Stat,
+        );
+        $Frontend{RestrictionsWidget} = $Self->{StatsViewObject}->RestrictionsWidget(
             Stat => $Stat,
         );
     }
@@ -538,7 +540,110 @@ sub EditAction {
         }
 
         $Data{UseAsValueSeries} ||= [];
+    }
 
+    #
+    # Restrictions
+    #
+    if ( $Stat->{StatType} eq 'dynamic' ) {
+        my $Index            = 0;
+        my $SelectFieldError = 0;
+        my $StopWordError    = 0;
+        $Data{StatType} = $Stat->{StatType};
+
+        OBJECTATTRIBUTE:
+        for my $ObjectAttribute ( @{ $Stat->{UseAsRestriction} } ) {
+
+            my $Element = 'Restrictions' . $ObjectAttribute->{Element};
+            if (!$ParamObject->GetParam( Param => "Select$Element" )) {
+                next OBJECTATTRIBUTE ;
+            }
+
+            my @Array = $ParamObject->GetArray( Param => $Element );
+            $Data{UseAsRestriction}[$Index]{SelectedValues} = \@Array;
+            $Data{UseAsRestriction}[$Index]{Element}        = $ObjectAttribute->{Element};
+            $Data{UseAsRestriction}[$Index]{Block}          = $ObjectAttribute->{Block};
+            $Data{UseAsRestriction}[$Index]{Selected}       = 1;
+
+            my $Fixed = $ParamObject->GetParam( Param => 'Fixed' . $Element );
+            $Data{UseAsRestriction}[$Index]{Fixed} = $Fixed ? 1 : 0;
+
+            if ( $ObjectAttribute->{Block} eq 'Time' ) {
+                my %Time;
+                my $TimeSelect = $ParamObject->GetParam( Param => $Element . 'TimeSelect' )
+                    || 'Absolut';
+                if ( $TimeSelect eq 'Absolut' ) {
+                    for my $Limit (qw(Start Stop)) {
+                        for my $Unit (qw(Year Month Day Hour Minute Second)) {
+                            if ( defined( $ParamObject->GetParam( Param => "$Element$Limit$Unit" ) ) )
+                            {
+                                $Time{ $Limit . $Unit } = $ParamObject->GetParam(
+                                    Param => "$Element$Limit$Unit",
+                                );
+                            }
+                        }
+                        if ( !defined( $Time{ $Limit . 'Hour' } ) ) {
+                            if ( $Limit eq 'Start' ) {
+                                $Time{StartHour}   = 0;
+                                $Time{StartMinute} = 0;
+                                $Time{StartSecond} = 0;
+                            }
+                            elsif ( $Limit eq 'Stop' ) {
+                                $Time{StopHour}   = 23;
+                                $Time{StopMinute} = 59;
+                                $Time{StopSecond} = 59;
+                            }
+                        }
+                        elsif ( !defined( $Time{ $Limit . 'Second' } ) ) {
+                            if ( $Limit eq 'Start' ) {
+                                $Time{StartSecond} = 0;
+                            }
+                            elsif ( $Limit eq 'Stop' ) {
+                                $Time{StopSecond} = 59;
+                            }
+                        }
+
+                        $Data{UseAsRestriction}[$Index]{"Time$Limit"} = sprintf(
+                            "%04d-%02d-%02d %02d:%02d:%02d",
+                            $Time{ $Limit . 'Year' },
+                            $Time{ $Limit . 'Month' },
+                            $Time{ $Limit . 'Day' },
+                            $Time{ $Limit . 'Hour' },
+                            $Time{ $Limit . 'Minute' },
+                            $Time{ $Limit . 'Second' },
+                        );
+                    }
+                }
+                else {
+                    $Data{UseAsRestriction}[$Index]{TimeRelativeUnit} = $ParamObject->GetParam(
+                        Param => $Element . 'TimeRelativeUnit'
+                    );
+                    $Data{UseAsRestriction}[$Index]{TimeRelativeCount} = $ParamObject->GetParam(
+                        Param => $Element . 'TimeRelativeCount'
+                    );
+                }
+            }
+
+            # check for stop words
+            my %StopWordFields = $Self->{StatsViewObject}->_StopWordFieldsGet();
+
+            # only check if a stop word has been found in any one of the input fields
+            # as soon as a stop word has been found, no further check of other input fields is necessary
+            if ( !$StopWordError && $StopWordFields{$Element} ) {
+                my $Value = join( ' ', @{ $Data{UseAsRestriction}[$Index]{SelectedValues} } );
+                my %StopWordsServerErrors = $Self->{StatsViewObject}->_StopWordsServerErrorsGet(
+                    $Element => $Value,
+                );
+
+                if (%StopWordsServerErrors) {
+                    $StopWordError = 1;
+                }
+            }
+
+            $Index++;
+        }
+
+        $Data{UseAsRestriction} ||= [];
     }
 
     my @Notify = $Self->{StatsObject}->CompletenessCheck(

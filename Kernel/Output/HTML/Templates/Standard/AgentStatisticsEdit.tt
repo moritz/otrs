@@ -59,9 +59,16 @@
                         data-dialog-title="[% Translate('Configure Y-Axis') | html %]">
                         <span>[% Translate('Edit Y-Axis') | html %]</span>
                     </button>
-                    <div id="YAxisFormFields" class=""></div>
+                    <div id="YAxisFormFields" class="Hidden"></div>
 
-                    <button type="button" class="CallForAction EditRestrictions Right"><span>Edit Restrictions</span></button>
+                    <button type="button"
+                        class="CallForAction EditRestrictions Right"
+                        data-configuration-type="Restrictions"
+                        data-configuration-limit=""
+                        data-dialog-title="[% Translate('Configure Restrictions') | html %]">
+                        <span>[% Translate('Edit Restrictions') | html %]</span>
+                    </button>
+                    <div id="RestrictionsFormFields" class="Hidden"></div>
 
                     <div id="EditDialogTemplate" class="Hidden">
                         <div class="Fields"></div>
@@ -115,6 +122,7 @@
 #       <!-- append after form to avoid element submit -->
         [% Data.XAxisWidget %]
         [% Data.YAxisWidget %]
+        [% Data.RestrictionsWidget %]
     </div>
 </div>
 [% WRAPPER JSOnDocumentComplete %]
