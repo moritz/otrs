@@ -37,7 +37,7 @@
                     <ul class="BigButtons">
                         [% IF Data.ShowAddDynamicMatrixButton %]
                         <li>
-                            <a href="#" data-statistic-preselection="DynamicMatrix">
+                            <a href="#" data-statistic-preselection="DynamicMatrix"[% IF Data.StatisticPreselection == 'DynamicMatrix' %] class="Active"[% END %]>
                                 <i class="fa fa-table"></i>
                                 <strong>[% Translate('Dynamic Matrix') | html %]</strong>
                                 <span>Explanation Text which goes over 2 lines</span>
@@ -46,7 +46,7 @@
                         [% END %]
                         [% IF Data.ShowAddDynamicListButton %]
                         <li>
-                            <a href="#" data-statistic-preselection="DynamicList">
+                            <a href="#" data-statistic-preselection="DynamicList"[% IF Data.StatisticPreselection == 'DynamicList' %] class="Active"[% END %]>
                                 <i class="fa fa-list"></i>
                                 <strong>[% Translate('Dynamic List') | html %]</strong>
                                 <span>Explanation Text which goes over 2 lines</span>
@@ -55,7 +55,7 @@
                         [% END %]
                         [% IF Data.ShowAddStaticButton %]
                         <li>
-                            <a href="#" data-statistic-preselection="Static">
+                            <a href="#" data-statistic-preselection="Static"[% IF Data.StatisticPreselection == 'Static' %] class="Active"[% END %]>
                                 <i class="fa fa-code"></i>
                                 <strong>[% Translate('Static') | html %]</strong>
                                 <span>Explanation Text which goes over 2 lines</span>

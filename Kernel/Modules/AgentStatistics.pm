@@ -731,6 +731,7 @@ sub AddScreen {
     my ( $Self, %Param ) = @_;
 
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+    my $ParamObject = $Kernel::OM->Get('Kernel::System::Web::Request');
 
     # In case of page reload because of errors
     my %Errors   = %{ $Param{Errors}   // {} };
@@ -763,6 +764,7 @@ sub AddScreen {
 
     # This is a page reload because of validation errors
     if (%Errors) {
+        $Frontend{StatisticPreselection} = $ParamObject->GetParam( Param => 'StatisticPreselection' );
         $Frontend{GeneralSpecificationsWidget} = $Self->{StatsViewObject}->GeneralSpecificationsWidget(
             Errors   => \%Errors,
             GetParam => \%GetParam,
