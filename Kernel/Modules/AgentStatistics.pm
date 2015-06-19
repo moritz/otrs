@@ -488,6 +488,59 @@ sub EditAction {
         }
     }
 
+    #
+    # Y Axis
+    #
+    if ( $Stat->{StatType} eq 'dynamic' ) {
+
+        my $Index = 0;
+        $Data{StatType} = $Stat->{StatType};
+
+        OBJECTATTRIBUTE:
+        for my $ObjectAttribute ( @{ $Stat->{UseAsValueSeries} } ) {
+            my $Element = 'YAxis' . $ObjectAttribute->{Element};
+            if ( !$ParamObject->GetParam( Param => "Select$Element" ) ) {
+                next OBJECTATTRIBUTE;
+            }
+
+            my @Array = $ParamObject->GetArray( Param => $Element );
+            $Data{UseAsValueSeries}[$Index]{SelectedValues} = \@Array;
+            $Data{UseAsValueSeries}[$Index]{Element}        = $ObjectAttribute->{Element};
+            $Data{UseAsValueSeries}[$Index]{Block}          = $ObjectAttribute->{Block};
+            $Data{UseAsValueSeries}[$Index]{Selected}       = 1;
+
+            my $FixedElement = 'Fixed' . $Element;
+            my $Fixed = $ParamObject->GetParam( Param => $FixedElement );
+            $Data{UseAsValueSeries}[$Index]{Fixed} = $Fixed ? 1 : 0;
+
+            # Check if Time was selected
+            if ( $ObjectAttribute->{Block} eq 'Time' ) {
+                my $TimeType = $ConfigObject->Get('Stats::TimeType') || 'Normal';
+                if ( $TimeType eq 'Normal' ) {
+
+                    # if the admin has only one unit selected, unfixed is useless
+                    if (
+                        !$Data{UseAsValueSeries}[0]{SelectedValues}[1]
+                        && $Data{UseAsValueSeries}[0]{SelectedValues}[0]
+                        )
+                    {
+                        $Data{UseAsValueSeries}[0]{Fixed} = 1;
+                    }
+                }
+
+                # for working with extended time
+                $Data{UseAsValueSeries}[$Index]{TimeScaleCount} = $ParamObject->GetParam(
+                    Param => $Element . 'TimeScaleCount'
+                    ) || 1;
+            }
+            $Index++;
+
+        }
+
+        $Data{UseAsValueSeries} ||= [];
+
+    }
+
     my @Notify = $Self->{StatsObject}->CompletenessCheck(
         StatData => {
             %{$Stat},
