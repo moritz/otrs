@@ -1020,6 +1020,7 @@ sub PreviewContainer {
     my $PreviewResult = $Self->{StatsObject}->StatsRun(
         StatID   => $Stat->{StatID},
         GetParam => $Stat,
+        Preview  => 1,
     );
 
     my $Output .= $LayoutObject->Output(
