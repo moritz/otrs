@@ -159,7 +159,7 @@ Core.Agent.Statistics = (function (TargetNS) {
                 return false;
             });
 
-            $('#EditDialog .Fields').on('click', '.DeleteButton', function(){
+            $('#EditDialog .Fields').on('click', '.RemoveButton', function(){
                 EditDialogDelete($(this).parents('.Element').data('element'));
                 return false;
             });

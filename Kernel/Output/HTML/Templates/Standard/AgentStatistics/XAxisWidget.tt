@@ -10,29 +10,15 @@
 
 [% RenderBlockStart("Attribute") %]
     <fieldset class="TableLike Element Element[% Data.Element | html %]" data-element="[% Data.Element | html %]">
-[% RenderBlockStart("MultiSelectField") %]
-        <label>
-            <input type="hidden" name="XAxisSelectedElement" value="[% Data.Element | html %]" [% Data.Checked %]/>
-            [% Translate(Data.Name) | html %]:
-        </label>
+        <input type="hidden" name="XAxisSelectedElement" value="[% Data.Element | html %]" [% Data.Checked %]/>
+        <label>[% Translate(Data.Name) | html %]:</label>
         <div class="Field">
+[% RenderBlockStart("MultiSelectField") %]
             <div>
                 [% Data.SelectField %]
             </div>
-            <div>
-                <input type="checkbox" name="Fixed[% Data.Element | html %]" id="Fixed[% Data.Element | html %]" value="1" [% Data.Fixed %] />
-                <label for="Fixed[% Data.Element | html %]">[% Translate("Fixed") | html %]</label>
-                <a class="DeleteButton" href="#"><i class="fa fa-minus-square-o"></i><span class="InvisibleText">[% Translate("Delete") | html %]</span></a>
-            </div>
-        </div>
-        <div class="Clear"></div>
 [% RenderBlockEnd("MultiSelectField") %]
 [% RenderBlockStart("TimeExtended") %]
-        <label>
-            <input type="hidden" name="XAxisSelectedElement" value="[% Data.Element | html %]" [% Data.Checked %]/>
-            [% Translate(Data.Name) | html %]:
-        </label>
-        <div class="Field">
             <fieldset class="TableLike FixedLabel">
                 <label>
                     <input type="radio" name="[% Data.Element | html %]TimeSelect" value="Absolut" [% Data.CheckedAbsolut | html %]/>
@@ -61,26 +47,9 @@
                     [% Data.TimeScaleUnit %] ([% Translate("minimal scale") | html %])
                 </div>
                 <div class="Clear"></div>
-
-                <div class="Field">
-                    <label>
-                        <input type="checkbox" name="Fixed[% Data.Element %]" value="1" [% Data.Fixed %]/>
-                        [% Translate("Fixed") | html %]
-                        <a class="DeleteButton" href="#"><i class="fa fa-minus-square-o"></i><span class="InvisibleText">[% Translate("Delete") | html %]</span></a>
-                    </label>
-                </div>
-                <div class="Clear"></div>
-
             </fieldset>
-        </div>
-        <div class="Clear"></div>
 [% RenderBlockEnd("TimeExtended") %]
 [% RenderBlockStart("Time") %]
-        <label>
-            <input type="hidden" name="XAxisSelectedElement" value="[% Data.Element | html %]" [% Data.Checked %]/>
-            [% Translate(Data.Name) | html %]:
-        </label>
-        <div class="Field">
             <div>
                 [% Translate("Between") | html %]
                 [% Data.TimeStart %] [% Translate("and") | html %] [% Data.TimeStop %]
@@ -90,16 +59,17 @@
                 [% Data.TimeSelectField %]
                 <p class="FieldExplanation">[% Translate("Please select only one element or turn off the button 'Fixed'.") | html %]</p>
             </div>
+[% RenderBlockEnd("Time") %]
             <div>
                 <label>
                     <input type="checkbox" name="Fixed[% Data.Element %]" value="1" [% Data.Fixed %]/>
-                    [% Translate("Fixed") | html %]
-                    <a class="DeleteButton" href="#"><i class="fa fa-minus-square-o"></i><span class="InvisibleText">[% Translate("Delete") | html %]</span></a>
+                    [% Translate("Do not allow changes to this element when the statistic is generated.") | html %]
                 </label>
+                <br/>
+                <a class="RemoveButton" href="#"><i class="fa fa-minus-square-o"></i><span class="InvisibleText">[% Translate("Delete") | html %]</span></a>
             </div>
         </div>
         <div class="Clear"></div>
-[% RenderBlockEnd("Time") %]
     </fieldset>
 [% IF Data.Checked %]
 [% WRAPPER JSOnDocumentComplete %]

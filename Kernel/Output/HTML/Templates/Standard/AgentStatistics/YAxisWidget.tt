@@ -10,51 +10,23 @@
 
 [% RenderBlockStart("Attribute") %]
     <fieldset class="TableLike Element Element[% Data.Element | html %]" data-element="[% Data.Element | html %]">
-[% RenderBlockStart("MultiSelectField") %]
-        <label>
-            <input type="hidden" name="Select[% Data.Element %]" value="1" />
-            [% Translate(Data.Name) | html %]:
-        </label>
+        <input type="hidden" name="Select[% Data.Element %]" value="1" />
+        <label>[% Translate(Data.Name) | html %]:</label>
         <div class="Field">
+[% RenderBlockStart("MultiSelectField") %]
             <div>
                 [% Data.SelectField %]
             </div>
-            <div>
-                <input type="checkbox" name="Fixed[% Data.Element | html %]" id="Fixed[% Data.Element | html %]" value="1" [% Data.Fixed %] />
-                <label for="Fixed[% Data.Element | html %]">[% Translate("Fixed") | html %]</label>
-                <a class="DeleteButton" href="#"><i class="fa fa-minus-square-o"></i><span class="InvisibleText">[% Translate("Delete") | html %]</span></a>
-            </div>
-        </div>
-        <div class="Clear"></div>
 [% RenderBlockEnd("MultiSelectField") %]
 [% RenderBlockStart("TimeExtended") %]
-        <label>
-            <input type="hidden" name="Select[% Data.Element %]" value="1" />
-            [% Translate(Data.Name) | html %]:
-        </label>
-        <div class="Field">
             <div>
                 [% Translate("Scale") | html %]:
                 [% Translate("minimal") | html %]
                 [% Data.TimeScaleUnit %]
 # [% Data.TimeScaleCount %] Comment: Danger to use and no best practise
             </div>
-            <div>
-                <label>
-                    <input type="checkbox" name="Fixed[% Data.Element %]" value="1" [% Data.Fixed %]/>
-                    [% Translate("Fixed") | html %]
-                    <a class="DeleteButton" href="#"><i class="fa fa-minus-square-o"></i><span class="InvisibleText">[% Translate("Delete") | html %]</span></a>
-                </label>
-            </div>
-        </div>
-        <div class="Clear"></div>
 [% RenderBlockEnd("TimeExtended") %]
 [% RenderBlockStart("Time") %]
-        <label>
-            <input type="hidden" name="Select[% Data.Element %]" value="1" />
-            [% Translate(Data.Name) | html %]:
-        </label>
-        <div class="Field">
             <div>
                 [% Translate("Scale") | html %]:
                 [% Translate("minimal") | html %]
@@ -64,18 +36,19 @@
                 [% Translate("Please select only one element or turn off the button 'Fixed'.") | html %]
             </p>
             <p class="FieldExplanation">
-                [% Translate("Please remember, that the scale for value series has to be larger than the scale for the X-axis (e.g. X-Axis => Month, ValueSeries => Year).") | html %]
+                [% Translate("Please remember that the scale for value series has to be larger than the scale for the X-axis (e.g. X-Axis => Month, ValueSeries => Year).") | html %]
             </p>
+[% RenderBlockEnd("Time") %]
             <div>
                 <label>
                     <input type="checkbox" name="Fixed[% Data.Element %]" value="1" [% Data.Fixed %]/>
-                    [% Translate("Fixed") | html %]
-                    <a class="DeleteButton" href="#"><i class="fa fa-minus-square-o"></i><span class="InvisibleText">[% Translate("Delete") | html %]</span></a>
+                    [% Translate("Do not allow changes to this element when the statistic is generated.") | html %]
+                    <br/>
+                    <a class="RemoveButton" href="#"><i class="fa fa-minus-square-o"></i><span class="InvisibleText">[% Translate("Delete") | html %]</span></a>
                 </label>
             </div>
         </div>
         <div class="Clear"></div>
-[% RenderBlockEnd("Time") %]
     </fieldset>
 [% IF Data.Checked %]
 [% WRAPPER JSOnDocumentComplete %]
