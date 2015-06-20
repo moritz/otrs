@@ -6,6 +6,10 @@
 # did not receive this file, see http://www.gnu.org/licenses/agpl.txt.
 # --
 
+<script type="text/javascript" src="http://gabelerner.github.io/canvg/rgbcolor.js"></script>
+<script type="text/javascript" src="http://gabelerner.github.io/canvg/StackBlur.js"></script>
+<script type="text/javascript" src="http://gabelerner.github.io/canvg/canvg.js"></script>
+
 [% SET ChartTypes = {
 'D3::MultiBarChart'    => 'Bar',
 'D3::MultiLineChart'   => 'Line',
@@ -27,18 +31,65 @@
                 </tr>
                 <tr>
                     <td colspan="2">
-                        <svg class="" id="ChartContent" style="min-height: 500px"></svg>
+                        <div id="svg-container">
+                            <svg class="" id="ChartContent" style="min-height: 500px"></svg>
+                        </div>
 [% WRAPPER JSOnDocumentComplete %]
 <script type="text/javascript">
     Core.UI.AdvancedChart.Init([% ChartTypes.item(Data.Format) | JSON %], [% JSON(Data.RawData) %], 'svg#ChartContent');
 </script>
 [% END %]
-                    </td>
-                </tr>
-            </table>
-        </td>
-    </tr>
-    <tr>
-        <td class="contentfooter">&nbsp;</td>
-    </tr>
+</td>
+</tr>
+</table>
+<div style="height: 500px; width: 1000px; position: absolute; top: 0; visibility: hidden;">
+<canvas id="canvas" style="display: none;"></canvas>
+</div>
+<a id="download-svg" target="_blank" class="">SVG</a>
+<a id="download-png" class="Hidden" download="test.png">PNG</a>
+[% WRAPPER JSOnDocumentComplete %]
+<script type="text/javascript">
+$('#download-svg').on('click', function() {
+    this.href = 'data:image/svg+xml;base64,' + btoa($('#svg-container').html());
+    link.download = 'test.svg';
+});
+
+function ConvertSVGtoPNG($SVGContainer, $TargetLink, FinishCallback) {
+    var // Canvg requires trimmed content
+        SVGContent = $SVGContainer.html().trim(),
+        initialRedrawDone = false;
+
+    var $CanvasContainer = $('<div id="canvas-container" style="position: absolute; top: 0; visibility: hidden;"></div>');
+    $CanvasContainer.css('height', $SVGContainer.css('height'));
+    $CanvasContainer.css('width', $SVGContainer.css('width'));
+    $CanvasContainer.append('<canvas id="SVG2PNGCanvas" style=""></canvas>');
+    $CanvasContainer.appendTo('body');
+
+    function HandleRedraw() {
+        if (initialRedrawDone) {
+            $TargetLink.attr('href', $('#SVG2PNGCanvas').get(0).toDataURL('image/png'));
+            $('#SVG2PNGCanvas').get(0).svg.stop()
+            $('#canvas-container').remove();
+            FinishCallback();
+            return false;
+        }
+        initialRedrawDone = true;
+        return true;
+    }
+    // Draw svg on canvas
+    canvg($CanvasContainer.find('canvas').get(0), SVGContent, { ignoreMouse: true, ignoreAnimations: true, forceRedraw: HandleRedraw });
+
+}
+
+window.setTimeout(function(){
+    ConvertSVGtoPNG($('#svg-container'), $('#download-png'), function(){ $('a').show(); });
+}, 1000);
+
+</script>
+[% END %]
+</td>
+</tr>
+<tr>
+<td class="contentfooter">&nbsp;</td>
+</tr>
 </table>
