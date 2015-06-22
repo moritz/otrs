@@ -6,6 +6,18 @@
 # did not receive this file, see http://www.gnu.org/licenses/agpl.txt.
 # --
 
+[% IF Data.Notify.size %]
+<div class="Preview">
+    <p class="Error">[% Translate('There are problems in the configuration of this statistic:') | html %]</p>
+    [% FOR Notification IN Data.Notify %]
+    <p class="Error">[% Notification.Info %]</p>
+    [% END %]
+</div>
+[% ELSIF !Data.PreviewResult %]
+<div class="Preview">
+    <p>[% Translate('This statistic does not provide preview data.') | html %]</p>
+</div>
+[% ELSE %]
 [% SET PreviewFormats = Data.Format.grep('Print|D3') %]
 [% SET ChartTypes = {
 'D3::MultiBarChart'    => 'Bar',
@@ -79,5 +91,7 @@ $('.SwitchView').trigger('change');
     [% END %]
 </span>
 -->
+
+[% END %]
 
 [% END %]

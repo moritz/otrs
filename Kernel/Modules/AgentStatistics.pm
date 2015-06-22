@@ -328,6 +328,11 @@ sub EditScreen {
         StatID => $Stat->{StatID},
     );
 
+    my @Notify = $Self->{StatsObject}->CompletenessCheck(
+        StatData => $Stat,
+        Section  => 'All'
+    );
+
     if ( $Stat->{StatType} eq 'dynamic' ) {
         $Frontend{PreviewContainer} = $Self->{StatsViewObject}->PreviewContainer(
             Stat => $Stat,
@@ -533,7 +538,7 @@ sub EditAction {
                 # for working with extended time
                 $Data{UseAsValueSeries}[$Index]{TimeScaleCount} = $ParamObject->GetParam(
                     Param => $Element . 'TimeScaleCount'
-                    ) || 1;
+                ) || 1;
             }
             $Index++;
 
@@ -555,8 +560,8 @@ sub EditAction {
         for my $ObjectAttribute ( @{ $Stat->{UseAsRestriction} } ) {
 
             my $Element = 'Restrictions' . $ObjectAttribute->{Element};
-            if (!$ParamObject->GetParam( Param => "Select$Element" )) {
-                next OBJECTATTRIBUTE ;
+            if ( !$ParamObject->GetParam( Param => "Select$Element" ) ) {
+                next OBJECTATTRIBUTE;
             }
 
             my @Array = $ParamObject->GetArray( Param => $Element );
@@ -646,15 +651,15 @@ sub EditAction {
         $Data{UseAsRestriction} ||= [];
     }
 
-    my @Notify = $Self->{StatsObject}->CompletenessCheck(
-        StatData => {
-            %{$Stat},
-            %Data,
-        },
-        Section => 'Specification'
-    );
+    # my @Notify = $Self->{StatsObject}->CompletenessCheck(
+    #     StatData => {
+    #         %{$Stat},
+    #         %Data,
+    #     },
+    #     Section => 'Specification'
+    # );
 
-    if ( %Errors || @Notify ) {
+    if (%Errors) {
         return $Self->EditScreen(
             Errors   => \%Errors,
             GetParam => \%Data,
@@ -731,7 +736,7 @@ sub AddScreen {
     my ( $Self, %Param ) = @_;
 
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
-    my $ParamObject = $Kernel::OM->Get('Kernel::System::Web::Request');
+    my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
 
     # In case of page reload because of errors
     my %Errors   = %{ $Param{Errors}   // {} };
@@ -834,12 +839,12 @@ sub AddAction {
         #}
     }
 
-    my @Notify = $Self->{StatsObject}->CompletenessCheck(
-        StatData => \%Data,
-        Section  => 'Specification'
-    );
+    # my @Notify = $Self->{StatsObject}->CompletenessCheck(
+    #     StatData => \%Data,
+    #     Section  => 'Specification'
+    # );
 
-    if ( %Errors || @Notify ) {
+    if (%Errors) {
         return $Self->AddScreen(
             Errors   => \%Errors,
             GetParam => \%Data,

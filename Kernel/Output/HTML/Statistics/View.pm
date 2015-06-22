@@ -1009,7 +1009,6 @@ sub YAxisWidget {
     return $Output;
 }
 
-
 sub RestrictionsWidget {
     my ( $Self, %Param ) = @_;
 
@@ -1085,8 +1084,7 @@ sub RestrictionsWidget {
                 $BlockData{Invalid} = $StopWordsServerErrors{ $ObjectAttribute->{Name} . 'Invalid' };
 
                 if ( $StopWordsServerErrors{ $ObjectAttribute->{Name} . 'InvalidTooltip' } ) {
-                    $BlockData{InvalidTooltip}
-                        = $StopWordsServerErrors{ $ObjectAttribute->{Name} . 'InvalidTooltip' };
+                    $BlockData{InvalidTooltip} = $StopWordsServerErrors{ $ObjectAttribute->{Name} . 'InvalidTooltip' };
                 }
             }
         }
@@ -1131,19 +1129,27 @@ sub PreviewContainer {
 
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
 
-    my $PreviewResult = $Self->{StatsObject}->StatsRun(
-        StatID   => $Stat->{StatID},
-        GetParam => $Stat,
-        Preview  => 1,
+    my @Notify = $Self->{StatsObject}->CompletenessCheck(
+        StatData => $Stat,
+        Section  => 'All'
     );
+
+    my %Frontend;
+
+    if ( !@Notify ) {
+        $Frontend{PreviewResult} = $Self->{StatsObject}->StatsRun(
+            StatID   => $Stat->{StatID},
+            GetParam => $Stat,
+            Preview  => 1,
+        );
+    }
 
     my $Output .= $LayoutObject->Output(
         TemplateFile => 'AgentStatistics/PreviewContainer',
         Data         => {
-
-            #%Frontend,
             %{$Stat},
-            PreviewResult => $PreviewResult,
+            %Frontend,
+            Notify => \@Notify,
         },
     );
     return $Output;
