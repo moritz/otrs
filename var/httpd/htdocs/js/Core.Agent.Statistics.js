@@ -130,7 +130,7 @@ Core.Agent.Statistics = (function (TargetNS) {
             }
 
             Core.UI.Dialog.ShowContentDialog(
-                '<div id="EditDialog" style="max-height: 800px; width: 600px; overflow: auto;"></div>',
+                '<div id="EditDialog" style="max-height: 800px; width: 800px; overflow: auto;"></div>',
                 DialogTitle,
                 100,
                 'Center',

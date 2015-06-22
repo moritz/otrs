@@ -6,11 +6,26 @@
 # did not receive this file, see http://www.gnu.org/licenses/agpl.txt.
 # --
 
-[% IF Data.Notify.size %]
+[% IF Data.StatsConfigurationErrors.size %]
 <div class="Preview">
     <p class="Error">[% Translate('There are problems in the configuration of this statistic:') | html %]</p>
-    [% FOR Notification IN Data.Notify %]
-    <p class="Error">[% Notification.Info %]</p>
+    [% FOR Error IN Data.StatsConfigurationErrors.GeneralSpecificationFieldErrors.pairs %]
+    <p class="Error">[% Error.key | html %]: [% Error.value %]</p>
+    [% END %]
+    [% FOR Error IN Data.StatsConfigurationErrors.XAxisFieldErrors.pairs %]
+    <p class="Error">[% Error.key | html%]: [% Error.value %]</p>
+    [% END %]
+    [% FOR Error IN Data.StatsConfigurationErrors.XAxisGeneralErrors %]
+    <p class="Error">[% Error | html %]</p>
+    [% END %]
+    [% FOR Error IN Data.StatsConfigurationErrors.YAxisFieldErrors.pairs %]
+    <p class="Error">[% Error.key | html%]: [% Error.value %]</p>
+    [% END %]
+    [% FOR Error IN Data.StatsConfigurationErrors.YAxisGeneralErrors %]
+    <p class="Error">[% Error | html %]</p>
+    [% END %]
+    [% FOR Error IN Data.StatsConfigurationErrors.RestrictionsFieldErrors.pairs %]
+    <p class="Error">[% Error.key | html%]: [% Error.value %]</p>
     [% END %]
 </div>
 [% ELSIF !Data.PreviewResult %]

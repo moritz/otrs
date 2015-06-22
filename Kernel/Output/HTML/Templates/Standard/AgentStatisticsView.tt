@@ -41,6 +41,9 @@
                     <h2>[% Translate("Settings") | html %]</h2>
                 </div>
                 <div class="Content">
+                    [% FOR Error IN Data.Errors %]
+                    <div class="MessageBox Error"><p>[% Error | html %]</p></div>
+                    [% END %]
                     [% Data.StatsViewParameterWidget %]
                 </div>
             </div>

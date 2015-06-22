@@ -328,11 +328,6 @@ sub EditScreen {
         StatID => $Stat->{StatID},
     );
 
-    my @Notify = $Self->{StatsObject}->CompletenessCheck(
-        StatData => $Stat,
-        Section  => 'All'
-    );
-
     if ( $Stat->{StatType} eq 'dynamic' ) {
         $Frontend{PreviewContainer} = $Self->{StatsViewObject}->PreviewContainer(
             Stat => $Stat,
@@ -684,6 +679,8 @@ sub ViewScreen {
     my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
     my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
 
+    my @Errors = @{ $Param{Errors} || [] };
+
     # get StatID
     my $StatID = $ParamObject->GetParam( Param => 'StatID' );
     if ( !$StatID ) {
@@ -724,6 +721,7 @@ sub ViewScreen {
         TemplateFile => 'AgentStatisticsView',
         Data         => {
             AccessRw => $Self->{AccessRw},
+            Errors   => \@Errors,
             %Frontend,
             %{$Stat},
         },
@@ -958,222 +956,11 @@ sub RunAction {
         }
     }
     else {
-        my $TimePeriod = 0;
-
-        for my $Use (qw(UseAsRestriction UseAsXvalue UseAsValueSeries)) {
-            $Stat->{$Use} ||= [];
-
-            my @Array   = @{ $Stat->{$Use} };
-            my $Counter = 0;
-            ELEMENT:
-            for my $Element (@Array) {
-                next ELEMENT if !$Element->{Selected};
-
-                if ( !$Element->{Fixed} ) {
-                    if ( $ParamObject->GetArray( Param => $Use . $Element->{Element} ) )
-                    {
-                        my @SelectedValues = $ParamObject->GetArray(
-                            Param => $Use . $Element->{Element}
-                        );
-
-                        $Element->{SelectedValues} = \@SelectedValues;
-                    }
-                    if ( $Element->{Block} eq 'Time' ) {
-
-                        # get time object
-                        my $TimeObject = $Kernel::OM->Get('Kernel::System::Time');
-
-                        if (
-                            $ParamObject->GetParam(
-                                Param => $Use . $Element->{Element} . 'StartYear'
-                            )
-                            )
-                        {
-                            my %Time;
-                            for my $Limit (qw(Start Stop)) {
-                                for my $Unit (qw(Year Month Day Hour Minute Second)) {
-                                    if (
-                                        defined(
-                                            $ParamObject->GetParam(
-                                                Param => $Use
-                                                    . $Element->{Element}
-                                                    . "$Limit$Unit"
-                                                )
-                                        )
-                                        )
-                                    {
-                                        $Time{ $Limit . $Unit } = $ParamObject->GetParam(
-                                            Param => $Use . $Element->{Element} . "$Limit$Unit",
-                                        );
-                                    }
-                                }
-                                if ( !defined( $Time{ $Limit . 'Hour' } ) ) {
-                                    if ( $Limit eq 'Start' ) {
-                                        $Time{StartHour}   = 0;
-                                        $Time{StartMinute} = 0;
-                                        $Time{StartSecond} = 0;
-                                    }
-                                    elsif ( $Limit eq 'Stop' ) {
-                                        $Time{StopHour}   = 23;
-                                        $Time{StopMinute} = 59;
-                                        $Time{StopSecond} = 59;
-                                    }
-                                }
-                                elsif ( !defined( $Time{ $Limit . 'Second' } ) ) {
-                                    if ( $Limit eq 'Start' ) {
-                                        $Time{StartSecond} = 0;
-                                    }
-                                    elsif ( $Limit eq 'Stop' ) {
-                                        $Time{StopSecond} = 59;
-                                    }
-                                }
-                                $Time{"Time$Limit"} = sprintf(
-                                    "%04d-%02d-%02d %02d:%02d:%02d",
-                                    $Time{ $Limit . 'Year' },
-                                    $Time{ $Limit . 'Month' },
-                                    $Time{ $Limit . 'Day' },
-                                    $Time{ $Limit . 'Hour' },
-                                    $Time{ $Limit . 'Minute' },
-                                    $Time{ $Limit . 'Second' },
-                                );
-                            }
-
-                            # integrate this functionality in the completenesscheck
-                            if (
-                                $TimeObject->TimeStamp2SystemTime(
-                                    String => $Time{TimeStart}
-                                )
-                                < $TimeObject->TimeStamp2SystemTime(
-                                    String => $Element->{TimeStart}
-                                )
-                                )
-                            {
-
-                                # redirect to edit
-                                return $LayoutObject->Redirect(
-                                    OP =>
-                                        "Action=AgentStatistics;Subaction=View;StatID=$Param{StatID};Message=1",
-                                );
-                            }
-
-                            # integrate this functionality in the completenesscheck
-                            if (
-                                $TimeObject->TimeStamp2SystemTime(
-                                    String => $Time{TimeStop}
-                                )
-                                > $TimeObject->TimeStamp2SystemTime(
-                                    String => $Element->{TimeStop}
-                                )
-                                )
-                            {
-                                return $LayoutObject->Redirect(
-                                    OP =>
-                                        "Action=AgentStatistics;Subaction=View;StatID=$Param{StatID};Message=2",
-                                );
-                            }
-                            $Element->{TimeStart} = $Time{TimeStart};
-                            $Element->{TimeStop}  = $Time{TimeStop};
-                            $TimePeriod           = (
-                                $TimeObject->TimeStamp2SystemTime(
-                                    String => $Element->{TimeStop}
-                                    )
-                                )
-                                - (
-                                $TimeObject->TimeStamp2SystemTime(
-                                    String => $Element->{TimeStart}
-                                    )
-                                );
-                        }
-                        else {
-                            my %Time;
-                            my ( $s, $m, $h, $D, $M, $Y ) = $TimeObject->SystemTime2Date(
-                                SystemTime => $TimeObject->SystemTime(),
-                            );
-                            $Time{TimeRelativeUnit} = $ParamObject->GetParam(
-                                Param => $Use . $Element->{Element} . 'TimeRelativeUnit'
-                            );
-                            if (
-                                $ParamObject->GetParam(
-                                    Param => $Use . $Element->{Element} . 'TimeRelativeCount'
-                                )
-                                )
-                            {
-                                $Time{TimeRelativeCount} = $ParamObject->GetParam(
-                                    Param => $Use . $Element->{Element} . 'TimeRelativeCount'
-                                );
-                            }
-
-                            my $TimePeriodAdmin = $Element->{TimeRelativeCount}
-                                * $Self->_TimeInSeconds(
-                                TimeUnit => $Element->{TimeRelativeUnit}
-                                );
-                            my $TimePeriodAgent = $Time{TimeRelativeCount}
-                                * $Self->_TimeInSeconds( TimeUnit => $Time{TimeRelativeUnit} );
-
-                            # integrate this functionality in the completenesscheck
-                            if ( $TimePeriodAgent > $TimePeriodAdmin ) {
-                                return $LayoutObject->Redirect(
-                                    OP =>
-                                        "Action=AgentStatistics;Subaction=View;StatID=$Param{StatID};Message=3",
-                                );
-                            }
-
-                            $TimePeriod                   = $TimePeriodAgent;
-                            $Element->{TimeRelativeCount} = $Time{TimeRelativeCount};
-                            $Element->{TimeRelativeUnit}  = $Time{TimeRelativeUnit};
-                        }
-                        if (
-                            $ParamObject->GetParam(
-                                Param => $Use . $Element->{Element} . 'TimeScaleCount'
-                            )
-                            )
-                        {
-                            $Element->{TimeScaleCount} = $ParamObject->GetParam(
-                                Param => $Use . $Element->{Element} . 'TimeScaleCount'
-                            );
-                        }
-                        else {
-                            $Element->{TimeScaleCount} = 1;
-                        }
-                    }
-                }
-
-                $GetParam{$Use}[$Counter] = $Element;
-                $Counter++;
-
-            }
-            if ( ref $GetParam{$Use} ne 'ARRAY' ) {
-                $GetParam{$Use} = [];
-            }
-        }
-
-        # check if the timeperiod is too big or the time scale too small
-        if (
-            $GetParam{UseAsXvalue}[0]{Block} eq 'Time'
-            && (
-                !$GetParam{UseAsValueSeries}[0]
-                || (
-                    $GetParam{UseAsValueSeries}[0]
-                    && $GetParam{UseAsValueSeries}[0]{Block} ne 'Time'
-                )
-            )
-            )
-        {
-
-            my $ScalePeriod = $Self->_TimeInSeconds(
-                TimeUnit => $GetParam{UseAsXvalue}[0]{SelectedValues}[0]
-            );
-
-            # integrate this functionality in the completenesscheck
-            if (
-                $TimePeriod / ( $ScalePeriod * $GetParam{UseAsXvalue}[0]{TimeScaleCount} )
-                > ( $ConfigObject->Get('Stats::MaxXaxisAttributes') || 1000 )
-                )
-            {
-                return $LayoutObject->Redirect(
-                    OP => "Action=AgentStatistics;Subaction=View;StatID=$Param{StatID};Message=4",
-                );
-            }
+        %GetParam = eval {
+            $Self->{StatsViewObject}->FetchAndValidateDynamicStatisticRunGetParams( Stat => $Stat );
+        };
+        if ($@) {
+            return $Self->ViewScreen( Errors => $@ );
         }
     }
 

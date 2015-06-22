@@ -516,25 +516,6 @@ sub StatsViewParameterWidget {
         $Stat->{PDFUsable} = $Kernel::OM->Get('Kernel::System::PDF') ? 1 : 0;
     }
 
-    # Error message if there is an invalid setting in the search mask
-    # in need of better solution
-
-    my $Message = $Kernel::OM->Get('Kernel::System::Web::Request')->GetParam( Param => 'Message' );
-
-    if ($Message) {
-        my %ErrorMessages = (
-            1 => 'The selected start time is before the allowed start time!',
-            2 => 'The selected end time is later than the allowed end time!',
-            3 => 'The selected time period is larger than the allowed time period!',
-            4 => 'Your reporting time interval is too small, please use a larger time scale!',
-        );
-
-        $Output .= $LayoutObject->Notify(
-            Info     => $ErrorMessages{$Message},
-            Priority => 'Error',
-        );
-    }
-
     # Show warning if restrictions contain stop words within ticket search.
     if (
         $Stat->{UseAsRestriction}
@@ -1129,14 +1110,14 @@ sub PreviewContainer {
 
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
 
-    my @Notify = $Self->{StatsObject}->CompletenessCheck(
-        StatData => $Stat,
-        Section  => 'All'
+    my %StatsConfigurationErrors = $Self->ValidateStatsConfiguration(
+        Stat    => $Stat,
+        Section => 'All'
     );
 
     my %Frontend;
 
-    if ( !@Notify ) {
+    if ( !%StatsConfigurationErrors ) {
         $Frontend{PreviewResult} = $Self->{StatsObject}->StatsRun(
             StatID   => $Stat->{StatID},
             GetParam => $Stat,
@@ -1149,10 +1130,249 @@ sub PreviewContainer {
         Data         => {
             %{$Stat},
             %Frontend,
-            Notify => \@Notify,
+            StatsConfigurationErrors => \%StatsConfigurationErrors,
         },
     );
     return $Output;
+}
+
+sub FetchAndValidateDynamicStatisticRunGetParams {
+    my ( $Self, %Param ) = @_;
+
+    my $Stat = $Param{Stat};
+    my %UserGetParam = %{ $Param{UserGetParam} // {} };
+
+    my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
+    my $ParamObject  = $Kernel::OM->Get('Kernel::System::Web::Request');
+
+    my $LocalGetParam = sub {
+        my (%Param) = @_;
+        my $Param = $Param{Param};
+        return $UserGetParam{$Param} // $ParamObject->GetParam( Param => $Param );
+    };
+
+    my $LocalGetArray = sub {
+        my (%Param) = @_;
+        my $Param = $Param{Param};
+        return $UserGetParam{$Param} // $ParamObject->GetArray( Param => $Param );
+    };
+
+    my ( %GetParam, @Errors );
+
+    my $TimePeriod = 0;
+
+    for my $Use (qw(UseAsXvalue UseAsValueSeries UseAsRestriction)) {
+        $Stat->{$Use} ||= [];
+
+        my @Array   = @{ $Stat->{$Use} };
+        my $Counter = 0;
+        ELEMENT:
+        for my $Element (@Array) {
+            next ELEMENT if !$Element->{Selected};
+
+            my $ElementName = $Use . $Element->{'Element'};
+
+            if ( !$Element->{Fixed} ) {
+                if ( $LocalGetArray->( Param => $ElementName ) )
+                {
+                    my @SelectedValues = $LocalGetArray->(
+                        Param => $ElementName
+                    );
+
+                    $Element->{SelectedValues} = \@SelectedValues;
+                }
+                if ( $Element->{Block} eq 'Time' ) {
+
+                    # get time object
+                    my $TimeObject = $Kernel::OM->Get('Kernel::System::Time');
+
+                    if (
+                        $LocalGetParam->(
+                            Param => $ElementName . 'StartYear'
+                        )
+                        )
+                    {
+                        my %Time;
+                        for my $Limit (qw(Start Stop)) {
+                            for my $Unit (qw(Year Month Day Hour Minute Second)) {
+                                if (
+                                    defined(
+                                        $LocalGetParam->(
+                                            Param => $Use
+                                                . $Element->{Element}
+                                                . "$Limit$Unit"
+                                            )
+                                    )
+                                    )
+                                {
+                                    $Time{ $Limit . $Unit } = $LocalGetParam->(
+                                        Param => $ElementName . "$Limit$Unit",
+                                    );
+                                }
+                            }
+                            if ( !defined( $Time{ $Limit . 'Hour' } ) ) {
+                                if ( $Limit eq 'Start' ) {
+                                    $Time{StartHour}   = 0;
+                                    $Time{StartMinute} = 0;
+                                    $Time{StartSecond} = 0;
+                                }
+                                elsif ( $Limit eq 'Stop' ) {
+                                    $Time{StopHour}   = 23;
+                                    $Time{StopMinute} = 59;
+                                    $Time{StopSecond} = 59;
+                                }
+                            }
+                            elsif ( !defined( $Time{ $Limit . 'Second' } ) ) {
+                                if ( $Limit eq 'Start' ) {
+                                    $Time{StartSecond} = 0;
+                                }
+                                elsif ( $Limit eq 'Stop' ) {
+                                    $Time{StopSecond} = 59;
+                                }
+                            }
+                            $Time{"Time$Limit"} = sprintf(
+                                "%04d-%02d-%02d %02d:%02d:%02d",
+                                $Time{ $Limit . 'Year' },
+                                $Time{ $Limit . 'Month' },
+                                $Time{ $Limit . 'Day' },
+                                $Time{ $Limit . 'Hour' },
+                                $Time{ $Limit . 'Minute' },
+                                $Time{ $Limit . 'Second' },
+                            );
+                        }
+
+                        # integrate this functionality in the completenesscheck
+                        if (
+                            $TimeObject->TimeStamp2SystemTime(
+                                String => $Time{TimeStart}
+                            )
+                            < $TimeObject->TimeStamp2SystemTime(
+                                String => $Element->{TimeStart}
+                            )
+                            )
+                        {
+
+                            push @Errors, Translatable('The selected start time is before the allowed start time.');
+                        }
+
+                        # integrate this functionality in the completenesscheck
+                        if (
+                            $TimeObject->TimeStamp2SystemTime(
+                                String => $Time{TimeStop}
+                            )
+                            > $TimeObject->TimeStamp2SystemTime(
+                                String => $Element->{TimeStop}
+                            )
+                            )
+                        {
+                            push @Errors, Translatable('The selected end time is later than the allowed end time.');
+                        }
+                        $Element->{TimeStart} = $Time{TimeStart};
+                        $Element->{TimeStop}  = $Time{TimeStop};
+                        $TimePeriod           = (
+                            $TimeObject->TimeStamp2SystemTime(
+                                String => $Element->{TimeStop}
+                                )
+                            )
+                            - (
+                            $TimeObject->TimeStamp2SystemTime(
+                                String => $Element->{TimeStart}
+                                )
+                            );
+                    }
+                    else {
+                        my %Time;
+                        my ( $s, $m, $h, $D, $M, $Y ) = $TimeObject->SystemTime2Date(
+                            SystemTime => $TimeObject->SystemTime(),
+                        );
+                        $Time{TimeRelativeUnit} = $LocalGetParam->(
+                            Param => $ElementName . 'TimeRelativeUnit'
+                        );
+                        if (
+                            $LocalGetParam->(
+                                Param => $ElementName . 'TimeRelativeCount'
+                            )
+                            )
+                        {
+                            $Time{TimeRelativeCount} = $LocalGetParam->(
+                                Param => $ElementName . 'TimeRelativeCount'
+                            );
+                        }
+
+                        my $TimePeriodAdmin = $Element->{TimeRelativeCount}
+                            * $Self->_TimeInSeconds(
+                            TimeUnit => $Element->{TimeRelativeUnit}
+                            );
+                        my $TimePeriodAgent = $Time{TimeRelativeCount}
+                            * $Self->_TimeInSeconds( TimeUnit => $Time{TimeRelativeUnit} );
+
+                        # integrate this functionality in the completenesscheck
+                        if ( $TimePeriodAgent > $TimePeriodAdmin ) {
+                            push @Errors,
+                                Translatable('The selected time period is larger than the allowed time period.');
+                        }
+
+                        $TimePeriod                   = $TimePeriodAgent;
+                        $Element->{TimeRelativeCount} = $Time{TimeRelativeCount};
+                        $Element->{TimeRelativeUnit}  = $Time{TimeRelativeUnit};
+                    }
+                    if (
+                        $LocalGetParam->(
+                            Param => $ElementName . 'TimeScaleCount'
+                        )
+                        )
+                    {
+                        $Element->{TimeScaleCount} = $LocalGetParam->(
+                            Param => $ElementName . 'TimeScaleCount'
+                        );
+                    }
+                    else {
+                        $Element->{TimeScaleCount} = 1;
+                    }
+                }
+            }
+
+            $GetParam{$Use}->[$Counter] = $Element;
+            $Counter++;
+
+        }
+        if ( ref $GetParam{$Use} ne 'ARRAY' ) {
+            $GetParam{$Use} = [];
+        }
+    }
+
+    # check if the timeperiod is too big or the time scale too small
+    if (
+        $GetParam{UseAsXvalue}[0]{Block} eq 'Time'
+        && (
+            !$GetParam{UseAsValueSeries}[0]
+            || (
+                $GetParam{UseAsValueSeries}[0]
+                && $GetParam{UseAsValueSeries}[0]{Block} ne 'Time'
+            )
+        )
+        )
+    {
+
+        my $ScalePeriod = $Self->_TimeInSeconds(
+            TimeUnit => $GetParam{UseAsXvalue}[0]{SelectedValues}[0]
+        );
+
+        # integrate this functionality in the completenesscheck
+        if (
+            $TimePeriod / ( $ScalePeriod * $GetParam{UseAsXvalue}[0]{TimeScaleCount} )
+            > ( $ConfigObject->Get('Stats::MaxXaxisAttributes') || 1000 )
+            )
+        {
+            push @Errors, Translatable('The selected time period is larger than the allowed time period.');
+        }
+    }
+
+    if (@Errors) {
+        die \@Errors;
+    }
+
+    return %GetParam;
 }
 
 sub RenderStatisticsResultData {
@@ -1427,6 +1647,296 @@ sub RenderStatisticsResultData {
             Type        => 'attachment',             # not inline because of bug# 2757
         );
     }
+}
+
+# TODO remove after merge
+sub Translatable {
+    return shift;
+}
+
+=item ValidateStatsConfiguration()
+
+    my @Notify = $StatsObject->ValidateStatsConfiguration(
+        StatData => \%StatData,
+        Section => 'All' || 'Specification' || 'ValueSeries' || 'Restrictions || Xaxis'
+    );
+
+=cut
+
+sub ValidateStatsConfiguration {
+    my ( $Self, %Param ) = @_;
+
+    for my $Needed (qw(Stat Section)) {
+        if ( !$Param{$Needed} ) {
+            $Kernel::OM->Get('Kernel::System::Log')->Log(
+                Priority => 'error',
+                Message  => "Need $Needed"
+            );
+            return;
+        }
+    }
+
+    my %GeneralSpecificationFieldErrors;
+    my ( %XAxisFieldErrors, @XAxisGeneralErrors );
+    my ( %YAxisFieldErrors, @YAxisGeneralErrors );
+    my (%RestrictionsFieldErrors);
+
+    my %Stat = %{ $Param{Stat} };
+    if ( $Param{Section} eq 'Specification' || $Param{Section} eq 'All' ) {
+        KEY:
+        for my $Field (qw(Title Description StatType Permission Format ObjectModule)) {
+            if ( !$Stat{$Field} ) {
+                $GeneralSpecificationFieldErrors{$Field} = Translatable('This field is required.');
+            }
+        }
+        if ( $Stat{StatType} && $Stat{StatType} eq 'static' && !$Stat{File} ) {
+            $GeneralSpecificationFieldErrors{File} = Translatable('This field is required.');
+        }
+        if ( $Stat{StatType} && $Stat{StatType} eq 'dynamic' && !$Stat{Object} ) {
+            $GeneralSpecificationFieldErrors{Object} = Translatable('This field is required.');
+        }
+
+        # if ( !$Param{Stat}{GraphSize} && $Param{Stat}{Format} ) {
+        #     FORMAT:
+        #     for ( @{ $Stat{Format} } ) {
+        #         if ( $_ =~ m{^GD::Graph\.*}x ) {
+        #             push @IndexArray, 3;
+        #             last FORMAT;
+        #         }
+        #     }
+        # }
+    }
+
+    # get needed objects
+    my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
+    my $TimeObject   = $Kernel::OM->Get('Kernel::System::Time');
+
+    if ( $Stat{StatType} eq 'dynamic' ) {
+
+        # X Axis
+        {
+            my $Flag = 0;
+            XVALUE:
+            for my $Xvalue ( @{ $Stat{UseAsXvalue} } ) {
+                next XVALUE if !$Xvalue->{Selected};
+
+                if ( $Xvalue->{Block} eq 'Time' ) {
+                    if ( $Xvalue->{TimeStart} && $Xvalue->{TimeStop} ) {
+                        my $TimeStart = $TimeObject->TimeStamp2SystemTime(
+                            String => $Xvalue->{TimeStart}
+                        );
+                        my $TimeStop = $TimeObject->TimeStamp2SystemTime(
+                            String => $Xvalue->{TimeStop}
+                        );
+                        if ( !$TimeStart || !$TimeStop ) {
+                            $XAxisFieldErrors{ $Xvalue->{Element} } = Translatable('The selected date is not valid.');
+                        }
+                        elsif ( $TimeStart > $TimeStop ) {
+                            $XAxisFieldErrors{ $Xvalue->{Element} }
+                                = Translatable('The selected end time is before the start time.');
+                        }
+                    }
+                    elsif ( !$Xvalue->{TimeRelativeUnit} || !$Xvalue->{TimeRelativeCount} ) {
+                        $XAxisFieldErrors{ $Xvalue->{Element} }
+                            = Translatable('There is something wrong with your time selection.');
+                    }
+
+                    if ( !$Xvalue->{SelectedValues}[0] ) {
+                        $XAxisFieldErrors{ $Xvalue->{Element} }
+                            = Translatable('There is something wrong with your time selection.');
+                    }
+                    elsif ( $Xvalue->{Fixed} && $#{ $Xvalue->{SelectedValues} } > 0 ) {
+                        $XAxisFieldErrors{ $Xvalue->{Element} }
+                            = Translatable('There is something wrong with your time selection.');
+                    }
+                }
+                $Flag = 1;
+                last XVALUE;
+            }
+            if ( !$Flag ) {
+                push @XAxisGeneralErrors, Translatable('Please select one element for the X-axis.');
+            }
+        }
+
+        # Y Axis
+        {
+            my $Counter  = 0;
+            my $TimeUsed = 0;
+            VALUESERIES:
+            for my $ValueSeries ( @{ $Stat{UseAsValueSeries} } ) {
+                next VALUESERIES if !$ValueSeries->{Selected};
+
+                if (
+                    $ValueSeries->{Block} eq 'Time'
+                    || $ValueSeries->{Block} eq 'TimeExtended'
+                    )
+                {
+                    if ( $ValueSeries->{Fixed} && $#{ $ValueSeries->{SelectedValues} } > 0 ) {
+                        $YAxisFieldErrors{ $ValueSeries->{Element} }
+                            = Translatable('There is something wrong with your time selection.');
+                    }
+                    elsif ( !$ValueSeries->{SelectedValues}[0] ) {
+                        $YAxisFieldErrors{ $ValueSeries->{Element} }
+                            = Translatable('There is something wrong with your time selection.');
+                    }
+                    $TimeUsed++;
+                }
+
+                $Counter++;
+            }
+
+            if ( $Counter > 1 && $TimeUsed ) {
+                push @YAxisGeneralErrors, Translatable('You can only use one time element for the Y axis.');
+            }
+            elsif ( $Counter > 2 ) {
+                push @YAxisGeneralErrors, Translatable('You can only use only one or two elements for the Y axis.');
+            }
+        }
+
+        # Restrictions
+        {
+            RESTRICTION:
+            for my $Restriction ( @{ $Stat{UseAsRestriction} } ) {
+                next RESTRICTION if !$Restriction->{Selected};
+
+                if ( $Restriction->{Block} eq 'SelectField' ) {
+                    if ( $Restriction->{Fixed} && $#{ $Restriction->{SelectedValues} } > 0 ) {
+                        $RestrictionsFieldErrors{ $Restriction->{Element} } = Translate(
+                            'Please select only one element or allow modification at stat generation time.'
+                        );
+                    }
+                    elsif ( !$Restriction->{SelectedValues}[0] ) {
+                        $RestrictionsFieldErrors{ $Restriction->{Element} }
+                            = Translate('Please select at least one value of this field.');
+                    }
+                }
+                elsif (
+                    $Restriction->{Block} eq 'InputField'
+                    && !$Restriction->{SelectedValues}[0]
+                    && $Restriction->{Fixed}
+                    )
+                {
+                    $RestrictionsFieldErrors{ $Restriction->{Element} }
+                        = Translate('Please provide a value or allow modification at stat generation time.');
+                    last RESTRICTION;
+                }
+                elsif (
+                    $Restriction->{Block} eq 'Time'
+                    || $Restriction->{Block} eq 'TimeExtended'
+                    )
+                {
+                    if ( $Restriction->{TimeStart} && $Restriction->{TimeStop} ) {
+                        my $TimeStart = $TimeObject->TimeStamp2SystemTime(
+                            String => $Restriction->{TimeStart}
+                        );
+                        my $TimeStop = $TimeObject->TimeStamp2SystemTime(
+                            String => $Restriction->{TimeStop}
+                        );
+                        if ( !$TimeStart || !$TimeStop ) {
+                            $RestrictionsFieldErrors{ $Restriction->{Element} }
+                                = Translate('The selected date is not valid.');
+                        }
+                        elsif ( $TimeStart > $TimeStop ) {
+                            $RestrictionsFieldErrors{ $Restriction->{Element} }
+                                = Translatable('The selected end time is before the start time.');
+                        }
+                    }
+                    elsif (
+                        !$Restriction->{TimeRelativeUnit}
+                        || !$Restriction->{TimeRelativeCount}
+                        )
+                    {
+                        $RestrictionsFieldErrors{ $Restriction->{Element} }
+                            = Translatable('There is something wrong with your time selection.');
+                    }
+                }
+            }
+        }
+
+        # Check if the timeperiod is too big or the time scale too small (used only for fixed time values).
+        {
+            XVALUE:
+            for my $Xvalue ( @{ $Stat{UseAsXvalue} } ) {
+                next XVALUE
+                    if !( $Xvalue->{Selected} && $Xvalue->{Fixed} && $Xvalue->{Block} eq 'Time' );
+
+                my $Flag = 1;
+                VALUESERIES:
+                for my $ValueSeries ( @{ $Stat{UseAsValueSeries} } ) {
+                    if ( $ValueSeries->{Selected} && $ValueSeries->{Block} eq 'Time' ) {
+                        $Flag = 0;
+                        last VALUESERIES;
+                    }
+                }
+
+                last XVALUE if !$Flag;
+
+                my $ScalePeriod = 0;
+                my $TimePeriod  = 0;
+
+                my $Count = $Xvalue->{TimeScaleCount} ? $Xvalue->{TimeScaleCount} : 1;
+
+                my %TimeInSeconds = (
+                    Year   => 60 * 60 * 60 * 365,
+                    Month  => 60 * 60 * 24 * 30,
+                    Week   => 60 * 60 * 24 * 7,
+                    Day    => 60 * 60 * 24,
+                    Hour   => 60 * 60,
+                    Minute => 60,
+                    Second => 1,
+                );
+
+                $ScalePeriod = $TimeInSeconds{ $Xvalue->{SelectedValues}[0] };
+
+                if ( !$ScalePeriod ) {
+                    $XAxisFieldErrors{ $Xvalue->{Element} } = Translatable('Please select a time scale.');
+                    last XVALUE;
+                }
+
+                if ( $Xvalue->{TimeStop} && $Xvalue->{TimeStart} ) {
+                    $TimePeriod = (
+                        $TimeObject->TimeStamp2SystemTime( String => $Xvalue->{TimeStop} )
+                        )
+                        - (
+                        $TimeObject->TimeStamp2SystemTime( String => $Xvalue->{TimeStart} )
+                        );
+                }
+                else {
+                    $TimePeriod = $TimeInSeconds{ $Xvalue->{TimeRelativeUnit} }
+                        * $Xvalue->{TimeRelativeCount};
+                }
+
+                my $MaxAttr = $ConfigObject->Get('Stats::MaxXaxisAttributes') || 1000;
+                if ( $TimePeriod / ( $ScalePeriod * $Count ) > $MaxAttr ) {
+                    $XAxisFieldErrors{ $Xvalue->{Element} }
+                        = Translatable('Your reporting time interval is too small, please use a larger time scale.');
+                }
+
+                last XVALUE;
+            }
+        }
+    }
+
+    if (
+        !%GeneralSpecificationFieldErrors
+        && !%XAxisFieldErrors
+        && !@XAxisGeneralErrors
+        && !%YAxisFieldErrors
+        && !@YAxisGeneralErrors
+        && !%RestrictionsFieldErrors
+        )
+    {
+        return;
+    }
+
+    return (
+        GeneralSpecificationFieldErrors => \%GeneralSpecificationFieldErrors,
+        XAxisFieldErrors                => \%XAxisFieldErrors,
+        XAxisGeneralErrors              => \@XAxisGeneralErrors,
+        YAxisFieldErrors                => \%YAxisFieldErrors,
+        YAxisGeneralErrors              => \@YAxisGeneralErrors,
+        RestrictionsFieldErrors         => \%RestrictionsFieldErrors,
+    );
 }
 
 sub _Notify {
@@ -1834,11 +2344,11 @@ sub _TimeInSeconds {
     }
 
     my %TimeInSeconds = (
-        Year   => 31536000,    # 60 * 60 * 60 * 365
-        Month  => 2592000,     # 60 * 60 * 24 * 30
-        Week   => 604800,      # 60 * 60 * 24 * 7
-        Day    => 86400,       # 60 * 60 * 24
-        Hour   => 3600,        # 60 * 60
+        Year   => 60 * 60 * 60 * 365,
+        Month  => 60 * 60 * 24 * 30,
+        Week   => 60 * 60 * 24 * 7,
+        Day    => 60 * 60 * 24,
+        Hour   => 60 * 60,
         Minute => 60,
         Second => 1,
     );
