@@ -61,16 +61,7 @@ sub Preferences {
     # if no object name is defined use an empty string
     $Stat->{ObjectName} ||= '';
 
-    # get layout object
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
-
-    $Stat->{Description} = $LayoutObject->Ascii2Html(
-        Text           => $Stat->{Description},
-        HTMLResultMode => 1,
-        NewLine        => 72,
-    );
-
-    # get user object
     my $UserObject = $Kernel::OM->Get('Kernel::System::User');
 
     # check if the user has preferences for this widget
@@ -84,10 +75,18 @@ sub Preferences {
         );
     }
 
+    my %Format = %{ $Kernel::OM->Get('Kernel::Config')->Get('Stats::Format') || {}};
+
+    my %FilteredFormats;
+    for my $Key (sort keys %Format) {
+        $FilteredFormats{$Key} = $Format{$Key} if $Key =~ m{^D3}smx;
+    }
+
     my $StatsViewParameterWidget = $StatsViewObject->StatsViewParameterWidget(
         Stat         => $Stat,
         UserGetParam => $StatsSettings,
         IsCacheable  => 1,
+        Formats      => \%FilteredFormats,
     );
 
     my $SettingsHTML = $LayoutObject->Output(
@@ -149,7 +148,18 @@ sub Run {
         UserGetParam => $StatsSettings,
     );
 
-    # get layout object
+    my $Format = $StatsSettings->{Format};
+    if (!$Format) {
+        my $Stat = $StatsObject->StatsGet( StatID => $StatID );
+        STATFORMAT:
+        for my $StatFormat (@{$Stat->{Format} || []}) {
+            if ($StatFormat =~ m{^D3}smx) {
+                $Format = $StatFormat;
+                last STATFORMAT;
+            }
+        }
+    }
+
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
 
     if ( defined $CachedData ) {
@@ -162,6 +172,7 @@ sub Run {
             Data => {
                 Name      => $Self->{Name},
                 StatsData => $JSON,
+                Format    => $Format,
                 ChartType => $StatsSettings->{ChartType} // 'Bar',
                 Preferences => $Preferences{ 'GraphWidget' . $Self->{Name} } || '{}',
             },
@@ -195,7 +206,7 @@ sub Run {
         if (
             $StatsPermission
             && IsArrayRefWithData($StatFormat)
-            && grep { $_ eq 'Print' || $_ eq 'CSV' } @{$StatFormat}
+            && grep { $_ eq 'Print' || $_ eq 'CSV' || $_ eq 'Excel' } @{$StatFormat}
             )
         {
             $LayoutObject->Block(
@@ -207,6 +218,15 @@ sub Run {
             if ( grep { $_ eq 'CSV' } @{$StatFormat} ) {
                 $LayoutObject->Block(
                     Name => 'StatsDataLinkCSV',
+                    Data => {
+                        Name   => $Self->{Name},
+                        StatID => $StatID,
+                    },
+                );
+            }
+            if ( grep { $_ eq 'Excel' } @{$StatFormat} ) {
+                $LayoutObject->Block(
+                    Name => 'StatsDataLinkExcel',
                     Data => {
                         Name   => $Self->{Name},
                         StatID => $StatID,

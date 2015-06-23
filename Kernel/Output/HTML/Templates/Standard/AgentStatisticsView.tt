@@ -22,7 +22,7 @@
                     </li>
 [% IF Data.AccessRw %]
                     <li>
-                        <a href="[% Env("Baselink") %]Action=AgentStats;Subaction=Edit;StatID=[% Data.StatID | uri %]" class="CallForAction Fullsize Center"><span><i class="fa fa-edit"></i>[% Translate("Edit") | html %]</span></a>
+                        <a href="[% Env("Baselink") %]Action=AgentStatistics;Subaction=Edit;StatID=[% Data.StatID | uri %]" class="CallForAction Fullsize Center"><span><i class="fa fa-edit"></i>[% Translate("Edit") | html %]</span></a>
                     </li>
 [% END %]
                 </ul>

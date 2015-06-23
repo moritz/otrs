@@ -54,13 +54,18 @@ Core.Config.Set('Pref-GraphWidget[% Data.Name | html %]', [% Data.Preferences %]
     </a>
     <span class="Hidden WidgetTooltip">
 [% RenderBlockStart("StatsDataLinkCSV") %]
-        <a href="[% Env("Baselink") %]Action=AgentStats;Subaction=Run;Cached=1;StatID=[% Data.StatID | uri %];Format=CSV;Name=[% Data.Name | uri %]" title="[% Translate("Download") | html %]: [% Translate("CSV") | html %]">
-            [% Translate("Download") | html %]: [% Translate("CSV") | html %]
+        <a href="[% Env("Baselink") %]Action=AgentStats;Subaction=Run;Cached=1;StatID=[% Data.StatID | uri %];Format=CSV;Name=[% Data.Name | uri %]">
+            [% Translate("Download as CSV file") | html %]
         </a>
 [% RenderBlockEnd("StatsDataLinkCSV") %]
+[% RenderBlockStart("StatsDataLinkExcel") %]
+        <a href="[% Env("Baselink") %]Action=AgentStats;Subaction=Run;Cached=1;StatID=[% Data.StatID | uri %];Format=Excel;Name=[% Data.Name | uri %]">
+            [% Translate("Download as Excel file") | html %]
+        </a>
+[% RenderBlockEnd("StatsDataLinkExcel") %]
 [% RenderBlockStart("StatsDataLinkPDF") %]
-        <a href="[% Env("Baselink") %]Action=AgentStats;Subaction=Run;Cached=1;StatID=[% Data.StatID | uri %];Format=Print;Name=[% Data.Name | uri %]" title="[% Translate("Download") | html %]: [% Translate("PDF") | html %]">
-            [% Translate("Download") | html %]: [% Translate("PDF") | html %]
+        <a href="[% Env("Baselink") %]Action=AgentStats;Subaction=Run;Cached=1;StatID=[% Data.StatID | uri %];Format=Print;Name=[% Data.Name | uri %]">
+            [% Translate("Download as PDF file") | html %]
         </a>
 [% RenderBlockEnd("StatsDataLinkPDF") %]
     </span>

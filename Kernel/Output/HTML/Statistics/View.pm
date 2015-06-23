@@ -57,12 +57,19 @@ sub StatsViewParameterWidget {
     }
 
     # Check if there are any configuration errors that must be corrected by the stats admin
-    if ( !$Self->ValidateStatsConfiguration( Stat => $Param{Stat}, Errors => {} ) ) {
+    if (
+        !$Self->ValidateStatsConfiguration(
+            Stat   => $Param{Stat},
+            Errors => {}
+        )
+        )
+    {
         return;
     }
 
     my %UserGetParam = %{ $Param{UserGetParam} // {} };
     my $IsCacheable = $Param{IsCacheable} // 0;
+    my $Format = $Param{Formats} || $ConfigObject->Get('Stats::Format');
 
     my $LocalGetParam = sub {
         my (%Param) = @_;
@@ -96,14 +103,15 @@ sub StatsViewParameterWidget {
     my %SelectFormat;
     my $Flag    = 0;
     my $Counter = 0;
-    my $Format  = $ConfigObject->Get('Stats::Format');
     for my $UseAsValueSeries ( @{ $Stat->{UseAsValueSeries} } ) {
         if ( $UseAsValueSeries->{Selected} ) {
             $Counter++;
         }
     }
     my $CounterII = 0;
+    VALUE:
     for my $Value ( @{ $Stat->{Format} } ) {
+        next VALUE if !defined $Format->{$Value};
         if ( $Counter == 0 || $Value ne 'GD::Graph::pie' ) {
             $SelectFormat{$Value} = $Format->{$Value};
             $CounterII++;
@@ -112,6 +120,7 @@ sub StatsViewParameterWidget {
             $Flag = 1;
         }
     }
+
     if ( $CounterII > 1 ) {
         my %Frontend;
         $Frontend{SelectFormat} = $LayoutObject->BuildSelection(
@@ -1162,8 +1171,8 @@ sub PreviewContainer {
     my %StatsConfigurationErrors;
 
     $Self->ValidateStatsConfiguration(
-        Stat    => $Stat,
-        Errors  => \%StatsConfigurationErrors,
+        Stat   => $Stat,
+        Errors => \%StatsConfigurationErrors,
     );
 
     my %Frontend;
@@ -1329,7 +1338,8 @@ sub StatParamsGet {
                                     < $TimeObject->TimeStamp2SystemTime( String => $Element->{TimeStart} )
                                     )
                                 {
-                                    push @Errors, Translatable('The selected start time is before the allowed start time.');
+                                    push @Errors,
+                                        Translatable('The selected start time is before the allowed start time.');
                                 }
 
                                 # integrate this functionality in the completenesscheck
@@ -1338,7 +1348,8 @@ sub StatParamsGet {
                                     > $TimeObject->TimeStamp2SystemTime( String => $Element->{TimeStop} )
                                     )
                                 {
-                                    push @Errors, Translatable('The selected end time is later than the allowed end time.');
+                                    push @Errors,
+                                        Translatable('The selected end time is later than the allowed end time.');
                                 }
                                 $Element->{TimeStart} = $Time{TimeStart};
                                 $Element->{TimeStop}  = $Time{TimeStop};
