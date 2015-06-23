@@ -936,32 +936,11 @@ sub RunAction {
     }
 
     # get params
-    my %GetParam;
-
-    # not sure, if this is the right way
-    if ( $Stat->{StatType} eq 'static' ) {
-        my $Params = $Self->{StatsObject}->GetParams( StatID => $Param{StatID} );
-        PARAMITEM:
-        for my $ParamItem ( @{$Params} ) {
-
-            # param is array
-            if ( $ParamItem->{Multiple} ) {
-                my @Array = $ParamObject->GetArray( Param => $ParamItem->{Name} );
-                $GetParam{ $ParamItem->{Name} } = \@Array;
-                next PARAMITEM;
-            }
-
-            # param is string
-            $GetParam{ $ParamItem->{Name} } = $ParamObject->GetParam( Param => $ParamItem->{Name} );
-        }
-    }
-    else {
-        %GetParam = eval {
-            $Self->{StatsViewObject}->FetchAndValidateDynamicStatisticRunGetParams( Stat => $Stat );
-        };
-        if ($@) {
-            return $Self->ViewScreen( Errors => $@ );
-        }
+    my %GetParam = eval {
+        $Self->{StatsViewObject}->StatParamsGet( Stat => $Stat );
+    };
+    if ($@) {
+        return $Self->ViewScreen( Errors => $@ );
     }
 
     # run stat...
