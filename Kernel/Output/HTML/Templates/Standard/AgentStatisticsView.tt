@@ -44,31 +44,51 @@
                     [% FOR Error IN Data.Errors %]
                     <div class="MessageBox Error"><p>[% Error | html %]</p></div>
                     [% END %]
+
+                    [% IF Data.StatsViewParameterWidget %]
+
                     [% Data.StatsViewParameterWidget %]
-                </div>
-            </div>
 
-            <div class="WidgetSimple">
-                <div class="Header">
-                    <h2>[% Translate("Save statistic") | html %]</h2>
-                </div>
-                <div class="Content">
+                    [% IF Data.Valid %]
 
-                    <fieldset class="TableLike">
-
-                        <div class="Field SpacingTop">
-                            <button class="Primary CallForAction" type="submit" value="[% Translate("Save") | html %]">
-                                <span>[% Translate("Save") | html %]</span>
+                    <fieldset class="TableLike SpacingTop">
+                        <div class="Value">
+                            <button class="Primary CallForAction" type="submit" id="StartStatistic" name="Start" value="[% Translate("Start") | html %]">
+                                <span><i class="fa fa-caret-square-o-right"></i> [% Translate("Run now") | html %]</span>
                             </button>
-                            [% Translate('or') | html %]
-                            <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=Overview">
-                                [% Translate('Cancel') | html %]
-                            </a>
+                            or
+                            <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=Overview">Cancel</a>
                         </div>
                     </fieldset>
+
+                    [% WRAPPER JSOnDocumentComplete %]
+                    <script type="text/javascript">//<![CDATA[
+                    $('#StartStatistic').bind('click', function (Event) {
+                        var Format = $('#Format').val(),
+                            URL;
+
+                        // Open both HTML and PDF output in a popup because PDF is shown inline
+                        if (Format === 'Print' || Format.match(/D3/)) {
+                            URL = '[% Env("Baselink") %]' + Core.AJAX.SerializeForm($('#Format').parents('form'));
+                            Core.UI.Popup.OpenPopup(URL, 'Statistic', 'Default');
+                            return false;
+                        }
+                    });
+                    //]]></script>
+                    [% END %]
+
+                    [% END %]
+
+                    [% ELSE %]
+
+                    <div class="MessageBox Warning">
+                        <p>[% Translate('This statistic contains configuration errors and can currently not be used.') | html %]</p>
+                    </div>
+
+                    [% END %]
+
                 </div>
             </div>
-
         </form>
     </div>
 </div>

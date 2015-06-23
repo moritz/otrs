@@ -548,27 +548,6 @@ sub StatsViewParameterWidget {
         $Stat->{$Field} = $Kernel::OM->Get('Kernel::System::User')->UserName( UserID => $Stat->{$Field} );
     }
 
-    # # store last screen
-    # $SessionObject->UpdateSessionID(
-    #     SessionID => $Self->{SessionID},
-    #     Key       => 'LastStatsView',
-    #     Value     => $Self->{RequestedURL},
-    # );
-
-    # Completeness check
-    my @Notify = $Self->{StatsObject}->CompletenessCheck(
-        StatData => $Stat,
-        Section  => 'All'
-    );
-
-    # show the start button if the stat is valid and completeness check true
-    if ( $Stat->{Valid} && !@Notify ) {
-        $LayoutObject->Block(
-            Name => 'FormSubmit',
-            Data => $Stat,
-        );
-    }
-
     # check if the PDF module is installed and enabled
     if ( $ConfigObject->Get('PDF') ) {
         $Stat->{PDFUsable} = $Kernel::OM->Get('Kernel::System::PDF') ? 1 : 0;
@@ -611,16 +590,9 @@ sub StatsViewParameterWidget {
         }
     }
 
-    $Output .= $Self->_Notify(
-        StatData => $Stat,
-        Section  => 'All'
-    );
-
     $Output .= $LayoutObject->Output(
         TemplateFile => 'AgentStatistics/StatsViewParameterWidget',
         Data         => {
-
-            #%Frontend,
             %{$Stat},
         },
     );
