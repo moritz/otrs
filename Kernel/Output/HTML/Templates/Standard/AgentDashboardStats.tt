@@ -6,13 +6,16 @@
 # did not receive this file, see http://www.gnu.org/licenses/agpl.txt.
 # --
 
-[% RenderBlockStart("NoData") %]
-<i class="fa fa-signal" style="display: block; margin-bottom: 3px; font-size: 20px; text-align: center; color: #E77A34;"></i>
-<p class="Center FieldExplanation">[% Translate("The content of this statistic is being prepared for you, please be patient.") | html %]</p>
-[% RenderBlockEnd("NoData") %]
+[% IF Data.StatsData %]
+[% IF Data.Format %]
 
-[% RenderBlockStart("StatsData") %]
 <svg style="height: 350px;" class="GraphWidget[% Data.Name | html %]" id="GraphWidget[% Data.Name | html %]"></svg>
+
+[% SET ChartTypes = {
+'D3::MultiBarChart'    => 'Bar',
+'D3::MultiLineChart'   => 'Line',
+'D3::StackedAreaChart' => 'StackedArea',
+} %]
 
 [% WRAPPER JSOnDocumentComplete %]
 <script type="text/javascript">//<![CDATA[
@@ -28,9 +31,7 @@ Core.Config.Set('Stream', [% Translate("Stream") | JSON %]);
 Core.Config.Set('Pref-GraphWidget[% Data.Name | html %]', [% Data.Preferences %]);
 
 (function(){
-
     var Timeout = 500;
-
     // check if the container is already expanded, otherwise the graph
     // would have the wrong size after the widget settings have been saved
     // and the content is being reloaded using ajax.
@@ -39,37 +40,37 @@ Core.Config.Set('Pref-GraphWidget[% Data.Name | html %]', [% Data.Preferences %]
     }
 
     window.setTimeout(function () {
-        var RawData = [% Data.StatsData %],
-            ChartType = [% Data.ChartType | JSON %];
-        Core.UI.AdvancedChart.Init(ChartType, RawData, 'svg.GraphWidget[% Data.Name | html %]');
+        Core.UI.AdvancedChart.Init([% ChartTypes.item(Data.Format) | JSON %], [% JSON(Data.StatsData) %], 'svg.GraphWidget[% Data.Name | html %]');
     }, Timeout);
 }());
 //]]></script>
 [% END %]
 
-[% RenderBlockStart("StatsDataLink") %]
+[% SET AvailableFormats = Data.Stat.Format %]
+[% IF Data.AgentStatisticsFrontendPermission && AvailableFormats.grep('^(CSV|Print|Excel)$').size %]
 <div class="WidgetAction" id="GraphWidgetLink[% Data.Name | html %]">
     <a href="#" class="TriggerTooltip" title="[% Translate("Download") | html %]">
         <i class="fa fa-download"></i>
     </a>
     <span class="Hidden WidgetTooltip">
-[% RenderBlockStart("StatsDataLinkCSV") %]
+[% IF AvailableFormats.grep('^CSV$').size %]
         <a href="[% Env("Baselink") %]Action=AgentStats;Subaction=Run;Cached=1;StatID=[% Data.StatID | uri %];Format=CSV;Name=[% Data.Name | uri %]">
             [% Translate("Download as CSV file") | html %]
         </a>
-[% RenderBlockEnd("StatsDataLinkCSV") %]
-[% RenderBlockStart("StatsDataLinkExcel") %]
+[% END %]
+[% IF AvailableFormats.grep('^Excel$').size %]
         <a href="[% Env("Baselink") %]Action=AgentStats;Subaction=Run;Cached=1;StatID=[% Data.StatID | uri %];Format=Excel;Name=[% Data.Name | uri %]">
             [% Translate("Download as Excel file") | html %]
         </a>
-[% RenderBlockEnd("StatsDataLinkExcel") %]
-[% RenderBlockStart("StatsDataLinkPDF") %]
+[% END %]
+[% IF AvailableFormats.grep('^Print$').size %]
         <a href="[% Env("Baselink") %]Action=AgentStats;Subaction=Run;Cached=1;StatID=[% Data.StatID | uri %];Format=Print;Name=[% Data.Name | uri %]">
             [% Translate("Download as PDF file") | html %]
         </a>
-[% RenderBlockEnd("StatsDataLinkPDF") %]
+[% END %]
     </span>
 </div>
+
 [% WRAPPER JSOnDocumentComplete %]
 <script type="text/javascript">//<![CDATA[
 $('#GraphWidgetLink[% Data.Name | html %]').prependTo( $('#GraphWidget[% Data.Name | html %]').closest('.WidgetSimple').find('.ActionMenu') );
@@ -85,6 +86,20 @@ $('#GraphWidgetLink[% Data.Name | html %]').closest('.Header').bind('mouseleave.
 });
 //]]></script>
 [% END %]
-[% RenderBlockEnd("StatsDataLink") %]
 
-[% RenderBlockEnd("StatsData") %]
+[% END %]
+
+[% ELSE %]
+
+<div class="MessageBox Warning">
+    <p>[% Translate('Please select a valid graph output format in the configuration of this widget.') | html %]</p>
+</div>
+
+[% END %]
+
+[% ELSE %]
+
+<i class="fa fa-signal" style="display: block; margin-bottom: 3px; font-size: 20px; text-align: center; color: #E77A34;"></i>
+<p class="Center FieldExplanation">[% Translate("The content of this statistic is being prepared for you, please be patient.") | html %]</p>
+
+[% END %]

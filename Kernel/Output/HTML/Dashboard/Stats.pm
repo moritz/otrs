@@ -161,99 +161,38 @@ sub Run {
     }
 
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+    my $Stat = $StatsObject->StatsGet( StatID => $StatID );
 
-    if ( defined $CachedData ) {
-        my $JSON = $JSONObject->Encode(
-            Data => $CachedData,
-        );
-
-        $LayoutObject->Block(
-            Name => 'StatsData',
-            Data => {
-                Name      => $Self->{Name},
-                StatsData => $JSON,
-                Format    => $Format,
-                ChartType => $StatsSettings->{ChartType} // 'Bar',
-                Preferences => $Preferences{ 'GraphWidget' . $Self->{Name} } || '{}',
-            },
-        );
-
-        my $Stat = $StatsObject->StatsGet( StatID => $StatID );
-
-        # check permission for AgentStats
-        my $StatsReg = $Kernel::OM->Get('Kernel::Config')->Get('Frontend::Module')->{'AgentStats'};
-        my $StatsPermission;
-        if ( !$StatsReg->{GroupRo} && !$StatsReg->{Group} ) {
-            $StatsPermission = 1;
-        }
-        else {
-            TYPE:
-            for my $Type (qw(GroupRo Group)) {
-                my $StatsGroups = ref $StatsReg->{$Type} eq 'ARRAY' ? $StatsReg->{$Type} : [ $StatsReg->{$Type} ];
-                GROUP:
-                for my $StatsGroup ( @{$StatsGroups} ) {
-                    next GROUP if !$StatsGroup;
-                    next GROUP if !$LayoutObject->{"UserIsGroupRo[$StatsGroup]"};
-                    next GROUP if $LayoutObject->{"UserIsGroupRo[$StatsGroup]"} ne 'Yes';
-                    $StatsPermission = 1;
-                    last TYPE;
-                }
-            }
-        }
-
-        # add download buttons if agent has permission for AgentStats
-        my $StatFormat = $Stat->{Format};
-        if (
-            $StatsPermission
-            && IsArrayRefWithData($StatFormat)
-            && grep { $_ eq 'Print' || $_ eq 'CSV' || $_ eq 'Excel' } @{$StatFormat}
-            )
-        {
-            $LayoutObject->Block(
-                Name => 'StatsDataLink',
-                Data => {
-                    Name => $Self->{Name},
-                },
-            );
-            if ( grep { $_ eq 'CSV' } @{$StatFormat} ) {
-                $LayoutObject->Block(
-                    Name => 'StatsDataLinkCSV',
-                    Data => {
-                        Name   => $Self->{Name},
-                        StatID => $StatID,
-                    },
-                );
-            }
-            if ( grep { $_ eq 'Excel' } @{$StatFormat} ) {
-                $LayoutObject->Block(
-                    Name => 'StatsDataLinkExcel',
-                    Data => {
-                        Name   => $Self->{Name},
-                        StatID => $StatID,
-                    },
-                );
-            }
-            if ( grep { $_ eq 'Print' } @{$StatFormat} ) {
-                $LayoutObject->Block(
-                    Name => 'StatsDataLinkPDF',
-                    Data => {
-                        Name   => $Self->{Name},
-                        StatID => $StatID,
-                    },
-                );
-            }
-        }
+    # check permission for AgentStats
+    my $StatsReg = $Kernel::OM->Get('Kernel::Config')->Get('Frontend::Module')->{'AgentStatistics'};
+    my $AgentStatisticsFrontendPermission = 0;
+    if ( !$StatsReg->{GroupRo} && !$StatsReg->{Group} ) {
+        $AgentStatisticsFrontendPermission = 1;
     }
     else {
-        $LayoutObject->Block(
-            Name => 'NoData',
-        );
+        TYPE:
+        for my $Type (qw(GroupRo Group)) {
+            my $StatsGroups = ref $StatsReg->{$Type} eq 'ARRAY' ? $StatsReg->{$Type} : [ $StatsReg->{$Type} ];
+            GROUP:
+            for my $StatsGroup ( @{$StatsGroups} ) {
+                next GROUP if !$StatsGroup;
+                next GROUP if !$LayoutObject->{"UserIsGroupRo[$StatsGroup]"};
+                next GROUP if $LayoutObject->{"UserIsGroupRo[$StatsGroup]"} ne 'Yes';
+                $AgentStatisticsFrontendPermission = 1;
+                last TYPE;
+            }
+        }
     }
 
     my $Content = $LayoutObject->Output(
         TemplateFile => 'AgentDashboardStats',
         Data         => {
             Name => $Self->{Name},
+            StatsData => $CachedData,
+            Stat      => $Stat,
+            Format    => $Format,
+            AgentStatisticsFrontendPermission => $AgentStatisticsFrontendPermission,
+            Preferences => $Preferences{ 'GraphWidget' . $Self->{Name} } || '{}',
         },
         KeepScriptTags => $Param{AJAX},
     );
