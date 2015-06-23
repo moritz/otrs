@@ -47,34 +47,29 @@
 [% RenderBlockEnd("ExchangeAxis") %]
 </fieldset>
 
-[% RenderBlockStart("WidgetSettingsStart") %]
-<input type="hidden" name="[% Data.JSONFieldName | html %]" class="StatsSettingsJSON" />
-<div class="StatsSettingsBox" id="StatsSettingsBox[% Data.NamePref | html %]">
-[% RenderBlockEnd("WidgetSettingsStart") %]
-
 [% RenderBlockStart("Static") %]
-    <h2>
+<h2>
         [% Translate("Configurable params of static stat") | html %]
-    </h2>
-    <fieldset class="TableLike">
+</h2>
+<fieldset class="TableLike">
 [% RenderBlockStart("ItemParam") %]
-        <label for="[% Data.Name | html %]">[% Translate(Data.Param) | html %]:</label>
-        <div class="Value">[% Data.Field %]</div>
-        <div class="Clear"></div>
+    <label for="[% Data.Name | html %]">[% Translate(Data.Param) | html %]:</label>
+    <div class="Value">[% Data.Field %]</div>
+    <div class="Clear"></div>
 [% RenderBlockEnd("ItemParam") %]
-    </fieldset>
+</fieldset>
 [% RenderBlockEnd("Static") %]
 
 
 [% RenderBlockStart("Dynamic") %]
-    <h2>[% Translate(Data.Name) | html %]</h2>
-    <fieldset class="TableLike">
+<h2>[% Translate(Data.Name) | html %]</h2>
+<fieldset class="TableLike">
 [% RenderBlockStart("NoElement") %]
-        <p>[% Translate("No element selected.") | html %]</p>
+    <p>[% Translate("No element selected.") | html %]</p>
 [% RenderBlockEnd("NoElement") %]
 [% RenderBlockStart("Element") %]
-        <label>[% Translate(Data.Name) | html %]</label>
-        <div class="Value">
+    <label>[% Translate(Data.Name) | html %]</label>
+    <div class="Value">
 [% RenderBlockStart("TimePeriodFixed") %]
             [% Translate("Between") | html %] [% Data.TimeStart %] [% Translate("and") | html %] [% Data.TimeStop %]<br/>
 [% RenderBlockEnd("TimePeriodFixed") %]
@@ -94,83 +89,60 @@
             [% Data.SelectField %]
 [% RenderBlockEnd("SelectField") %]
 [% RenderBlockStart("InputField") %]
-            <input type="text" name="[% Data.Key | html %]" value="[% Data.Value | html %]" class="W25pc"/>
+        <input type="text" name="[% Data.Key | html %]" value="[% Data.Value | html %]" class="W25pc"/>
 [% RenderBlockEnd("InputField") %]
-        </div>
-        <div class="Clear"></div>
+    </div>
+    <div class="Clear"></div>
 
 [% RenderBlockStart("TimeScale") %]
-        <label><em>[% Translate("Scale") | html %]</em>:</label>
-        <div class="Value" data-min-seconds="[% Data.TimeScaleMinSeconds %]">
-            <p>
+    <label><em>[% Translate("Scale") | html %]</em>:</label>
+    <div class="Value" data-min-seconds="[% Data.TimeScaleMinSeconds %]">
+        <p>
                 [% Data.TimeScaleCount %]
                 [% Data.TimeScaleUnit %]
 [% RenderBlockStart("TimeScaleInfo") %]
-                ([% Translate("minimal scale") | html %] [% Data.TimeScaleCountMax %] [% Translate(Data.TimeScaleUnitMax) | html %])
+            ([% Translate("minimal scale") | html %] [% Data.TimeScaleCountMax %] [% Translate(Data.TimeScaleUnitMax) | html %])
 [% RenderBlockEnd("TimeScaleInfo") %]
-            </p>
-        </div>
-        <div class="Clear"></div>
+        </p>
+    </div>
+    <div class="Clear"></div>
 [% RenderBlockEnd("TimeScale") %]
 
 [% RenderBlockStart("TimePeriod") %]
-        <label><em>[% Translate("Between") | html %]</em>:</label>
-        <div class="Value">
-            <p>
+    <label><em>[% Translate("Between") | html %]</em>:</label>
+    <div class="Value">
+        <p>
                 [% Data.TimeStart %] [% Translate("and") | html %] [% Data.TimeStop %]<br/>
-                ([% Translate("maximal period from") | html %] [% Data.TimeStartMax | Localize("TimeLong") %] [% Translate("to") | html %] [% Data.TimeStopMax | Localize("TimeLong") %])
-            </p>
-        </div>
-        <div class="Clear"></div>
+            ([% Translate("maximal period from") | html %] [% Data.TimeStartMax | Localize("TimeLong") %] [% Translate("to") | html %] [% Data.TimeStopMax | Localize("TimeLong") %])
+        </p>
+    </div>
+    <div class="Clear"></div>
 [% RenderBlockEnd("TimePeriod") %]
 
-[% RenderBlockStart("TimePeriodNotChangable") %]
-        <label><em>[% Translate("Between") | html %]</em>:</label>
-        <div class="Value">
-            <p>
-                [% Data.TimeStartMax | Localize("TimeLong") %] [% Translate("and") | html %] [% Data.TimeStopMax | Localize("TimeLong") %] ([% Translate("not changable for dashboard statistics") | html %]).
-            </p>
-        </div>
-        <div class="Clear"></div>
-[% RenderBlockEnd("TimePeriodNotChangable") %]
+[% RenderBlockStart("TimePeriodNotChangeable") %]
+    <label><em>[% Translate("Between") | html %]</em>:</label>
+    <div class="Value">
+        <p>
+                [% Data.TimeStartMax | Localize("TimeLong") %] [% Translate("and") | html %] [% Data.TimeStopMax | Localize("TimeLong") %] ([% Translate("cannot be changed for cached statistics") | html %]).
+        </p>
+    </div>
+    <div class="Clear"></div>
+[% RenderBlockEnd("TimePeriodNotChangeable") %]
 
 [% RenderBlockStart("TimePeriodRelative") %]
-        <label><em>[% Translate("The last") | html %]</em>:</label>
-        <div class="Value" data-max-seconds="[% Data.TimeRelativeMaxSeconds %]">
-            <p>
+    <label><em>[% Translate("The last") | html %]</em>:</label>
+    <div class="Value" data-max-seconds="[% Data.TimeRelativeMaxSeconds %]">
+        <p>
                 [% Data.TimeRelativeCount %]
                 [% Data.TimeRelativeUnit %] ([% Translate("maximal period") | html %] [% Data.TimeRelativeCountMax %] [% Translate(Data.TimeRelativeUnitMax) | html %])
-            </p>
-        </div>
-        <div class="Clear"></div>
+        </p>
+    </div>
+    <div class="Clear"></div>
 [% RenderBlockEnd("TimePeriodRelative") %]
 
 [% RenderBlockEnd("Element") %]
-    </fieldset>
+</fieldset>
 [% RenderBlockEnd("Dynamic") %]
-
-[% RenderBlockStart("ChartTypeSelection") %]
-    <h2>[% Translate("Select Chart Type") | html %]</h2>
-    <fieldset class="TableLike">
-        <label>[% Translate("Chart Type") | html %]:</label>
-        <div class="Value">
-            <select id="ChartType" name="ChartType" data-selected="[% Data.ChartType %]">
-                <option value="Bar">[% Translate("Multi Bar Chart") | html %]</option>
-                <option value="Line">[% Translate("Multi Line Chart") | html %]</option>
-                <option value="StackedArea">[% Translate("Stacked Area Chart") | html %]</option>
-            </select>
-        </div>
-    </fieldset>
-[% RenderBlockEnd("ChartTypeSelection") %]
-
-[% RenderBlockStart("WidgetSettingsEnd") %]
-[% WRAPPER JSOnDocumentComplete %]
-<script type="text/javascript">//<![CDATA[
-Core.Agent.Dashboard.InitStatsConfiguration($('#StatsSettingsBox[% Data.NamePref | html %]'));
-//]]></script>
-[% END %]
-</div>
-[% RenderBlockEnd("WidgetSettingsEnd") %]
 
 [% RenderBlockStart("FormSubmit") %]
 <fieldset class="TableLike">

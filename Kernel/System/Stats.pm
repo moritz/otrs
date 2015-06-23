@@ -16,6 +16,7 @@ use Date::Pcalc qw(:all);
 use Storable qw();
 
 use Kernel::System::VariableCheck qw(:all);
+use Kernel::Output::HTML::Statistics::View;
 
 our @ObjectDependencies = (
     'Kernel::Config',
@@ -2079,8 +2080,28 @@ sub StatsResultCacheCompute {
         }
     }
 
-    my %GetParam = $Self->_StatsParamsGenerate(%Param);
-    return if !%GetParam;
+    my $Stat = $Self->StatsGet(
+        StatID => $Param{StatID},
+    );
+
+    my $StatsViewObject = Kernel::Output::HTML::Statistics::View->new(
+        StatsObject => $Self,
+    );
+
+    my %GetParam = eval {
+        $StatsViewObject->StatParamsGet(
+            Stat => $Stat,
+            UserGetParam => $Param{UserGetParam},
+        );
+    };
+
+    if ($@ || !%GetParam) {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            Priority => 'error',
+            Message  => "Cannot compute stat: $@!"
+        );
+        return;
+    }
 
     # get main object
     my $MainObject = $Kernel::OM->Get('Kernel::System::Main');
@@ -2136,8 +2157,28 @@ sub StatsResultCacheGet {
         }
     }
 
-    my %GetParam = $Self->_StatsParamsGenerate(%Param);
-    return if !%GetParam;
+    my $Stat = $Self->StatsGet(
+        StatID => $Param{StatID},
+    );
+
+    my $StatsViewObject = Kernel::Output::HTML::Statistics::View->new(
+        StatsObject => $Self,
+    );
+
+    my %GetParam = eval {
+        $StatsViewObject->StatParamsGet(
+            Stat => $Stat,
+            UserGetParam => $Param{UserGetParam},
+        );
+    };
+
+    if ($@ || !%GetParam) {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            Priority => 'error',
+            Message  => "Cannot compute stat: $@!"
+        );
+        return;
+    }
 
     # get main object
     my $MainObject = $Kernel::OM->Get('Kernel::System::Main');
@@ -2157,299 +2198,6 @@ sub StatsResultCacheGet {
         # Don't store complex structure in memory as it will be modified later.
         CacheInMemory => 0,
     );
-}
-
-# This internal function gets the full stats parameters merged with the user's
-#   parameters.
-sub _StatsParamsGenerate {
-    my ( $Self, %Param ) = @_;
-
-    for my $Needed (qw(StatID UserGetParam)) {
-        if ( !$Param{$Needed} ) {
-            $Kernel::OM->Get('Kernel::System::Log')->Log(
-                Priority => 'error',
-                Message  => "Need $Needed!"
-            );
-            return;
-        }
-    }
-
-    my %UserGetParam = %{ $Param{UserGetParam} };
-
-    my $Stat = $Self->StatsGet( StatID => $Param{StatID} );
-    if ( !IsHashRefWithData($Stat) ) {
-        $Kernel::OM->Get('Kernel::System::Log')->Log(
-            Priority => 'error',
-            Message  => "Could not load stat $Param{StatID}!"
-        );
-    }
-
-    # get time object
-    my $TimeObject = $Kernel::OM->Get('Kernel::System::Time');
-
-    # Get current date for static stats.
-    my ( $s, $m, $h, $D, $M, $Y ) = $TimeObject->SystemTime2Date(
-        SystemTime => $TimeObject->SystemTime(),
-    );
-
-    # get params
-    my %GetParam;
-
-    my %TimeInSeconds = (
-        Year   => 31536000,    # 60 * 60 * 60 * 365
-        Month  => 2592000,     # 60 * 60 * 24 * 30
-        Week   => 604800,      # 60 * 60 * 24 * 7
-        Day    => 86400,       # 60 * 60 * 24
-        Hour   => 3600,        # 60 * 60
-        Minute => 60,
-        Second => 1,
-    );
-
-    # not sure, if this is the right way
-    if ( $Stat->{StatType} eq 'static' ) {
-        $GetParam{Year}  = $Y;
-        $GetParam{Month} = $M;
-        $GetParam{Day}   = $D;
-
-        my $Params = $Self->GetParams( StatID => $Param{StatID} );
-        PARAMITEM:
-        for my $ParamItem ( @{$Params} ) {
-
-            next PARAMITEM if !defined $UserGetParam{ $ParamItem->{Name} };
-
-            # param is array
-            if ( $ParamItem->{Multiple} ) {
-                $GetParam{ $ParamItem->{Name} } = $UserGetParam{ $ParamItem->{Name} } || [];
-                next PARAMITEM;
-            }
-
-            # param is string
-            $GetParam{ $ParamItem->{Name} } = $UserGetParam{ $ParamItem->{Name} };
-        }
-    }
-    else {
-
-        # get config object
-        my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
-
-        my $TimePeriod = 0;
-
-        for my $Use (qw(UseAsRestriction UseAsXvalue UseAsValueSeries)) {
-            $Stat->{$Use} ||= [];
-
-            my @Array   = @{ $Stat->{$Use} };
-            my $Counter = 0;
-            ELEMENT:
-            for my $Element (@Array) {
-                next ELEMENT if !$Element->{Selected};
-
-                if ( !$Element->{Fixed} ) {
-                    if ( $UserGetParam{ $Use . $Element->{Element} } )
-                    {
-                        if ( ref $UserGetParam{ $Use . $Element->{Element} } ) {
-                            $Element->{SelectedValues} = $UserGetParam{ $Use . $Element->{Element} };
-                        }
-                        else {
-                            $Element->{SelectedValues} = [ $UserGetParam{ $Use . $Element->{Element} } ];
-                        }
-                    }
-                    if ( $Element->{Block} eq 'Time' ) {
-
-                        # Check if it is an absolute time period
-                        if ( $Element->{TimeStart} )
-                        {
-
-                            # Use the stat data as fallback
-                            my %Time = (
-                                TimeStart => $Element->{TimeStart},
-                                TimeStop  => $Element->{TimeStop},
-                            );
-
-                            for my $Limit (qw(Start Stop)) {
-                                for my $Unit (qw(Year Month Day Hour Minute Second)) {
-                                    if (
-                                        defined(
-                                            $UserGetParam{
-                                                $Use
-                                                    . $Element->{Element}
-                                                    . "$Limit$Unit"
-                                                }
-                                        )
-                                        )
-                                    {
-                                        $Time{ $Limit . $Unit } = $UserGetParam{
-                                            $Use
-                                                . $Element->{Element}
-                                                . "$Limit$Unit"
-                                        };
-                                    }
-                                }
-                                if ( !defined( $Time{ $Limit . 'Hour' } ) ) {
-                                    if ( $Limit eq 'Start' ) {
-                                        $Time{StartHour}   = 0;
-                                        $Time{StartMinute} = 0;
-                                        $Time{StartSecond} = 0;
-                                    }
-                                    elsif ( $Limit eq 'Stop' ) {
-                                        $Time{StopHour}   = 23;
-                                        $Time{StopMinute} = 59;
-                                        $Time{StopSecond} = 59;
-                                    }
-                                }
-                                elsif ( !defined( $Time{ $Limit . 'Second' } ) ) {
-                                    if ( $Limit eq 'Start' ) {
-                                        $Time{StartSecond} = 0;
-                                    }
-                                    elsif ( $Limit eq 'Stop' ) {
-                                        $Time{StopSecond} = 59;
-                                    }
-                                }
-                                if ( $Time{ $Limit . 'Year' } ) {
-                                    $Time{"Time$Limit"} = sprintf(
-                                        "%04d-%02d-%02d %02d:%02d:%02d",
-                                        $Time{ $Limit . 'Year' },
-                                        $Time{ $Limit . 'Month' },
-                                        $Time{ $Limit . 'Day' },
-                                        $Time{ $Limit . 'Hour' },
-                                        $Time{ $Limit . 'Minute' },
-                                        $Time{ $Limit . 'Second' },
-                                    );
-                                }
-                            }
-
-                            # integrate this functionality in the completenesscheck
-                            if (
-                                $TimeObject->TimeStamp2SystemTime(
-                                    String => $Time{TimeStart}
-                                )
-                                < $TimeObject->TimeStamp2SystemTime(
-                                    String => $Element->{TimeStart}
-                                )
-                                )
-                            {
-
-                                $Kernel::OM->Get('Kernel::System::Log')->Log(
-                                    Priority => 'error',
-                                    Message =>
-                                        "User StartTime $Time{TimeStart} is before configured StartTime $Element->{TimeStart}!",
-                                );
-
-                                return;
-                            }
-
-                            # integrate this functionality in the completenesscheck
-                            if (
-                                $TimeObject->TimeStamp2SystemTime(
-                                    String => $Time{TimeStop}
-                                )
-                                > $TimeObject->TimeStamp2SystemTime(
-                                    String => $Element->{TimeStop}
-                                )
-                                )
-                            {
-                                $Kernel::OM->Get('Kernel::System::Log')->Log(
-                                    Priority => 'error',
-                                    Message =>
-                                        "User StopTime $Time{TimeStop} is after configured StopTime $Element->{TimeStop}!",
-                                );
-
-                                return;
-                            }
-
-                            $Element->{TimeStart} = $Time{TimeStart};
-                            $Element->{TimeStop}  = $Time{TimeStop};
-                            $TimePeriod           = (
-                                $TimeObject->TimeStamp2SystemTime(
-                                    String => $Element->{TimeStop}
-                                    )
-                                )
-                                - (
-                                $TimeObject->TimeStamp2SystemTime(
-                                    String => $Element->{TimeStart}
-                                    )
-                                );
-                        }
-                        else {
-                            my %Time;
-                            $Time{TimeRelativeUnit} = $UserGetParam{ $Use . $Element->{Element} . 'TimeRelativeUnit' };
-                            $Time{TimeRelativeCount}
-                                = $UserGetParam{ $Use . $Element->{Element} . 'TimeRelativeCount' };
-
-                            # Use Values of the stat as fallback
-                            $Time{TimeRelativeCount} //= $Element->{TimeRelativeCount};
-                            $Time{TimeRelativeUnit}  //= $Element->{TimeRelativeUnit};
-
-                            my $TimePeriodAdmin = $Element->{TimeRelativeCount}
-                                * $TimeInSeconds{ $Element->{TimeRelativeUnit} };
-                            my $TimePeriodAgent = $Time{TimeRelativeCount}
-                                * $TimeInSeconds{ $Time{TimeRelativeUnit} };
-
-                            # integrate this functionality in the completenesscheck
-                            if ( $TimePeriodAgent > $TimePeriodAdmin ) {
-                                $Kernel::OM->Get('Kernel::System::Log')->Log(
-                                    Priority => 'error',
-                                    Message =>
-                                        "User TimePeriod is greater than allowed TimePeriod!",
-                                );
-
-                                return;
-                            }
-
-                            $TimePeriod                   = $TimePeriodAgent;
-                            $Element->{TimeRelativeCount} = $Time{TimeRelativeCount};
-                            $Element->{TimeRelativeUnit}  = $Time{TimeRelativeUnit};
-                        }
-                        if ( $UserGetParam{ $Use . $Element->{Element} . 'TimeScaleCount' } )
-                        {
-                            $Element->{TimeScaleCount} = $UserGetParam{ $Use . $Element->{Element} . 'TimeScaleCount' };
-                        }
-                        else {
-                            $Element->{TimeScaleCount} = 1;
-                        }
-                    }
-                }
-
-                $GetParam{$Use}[$Counter] = $Element;
-                $Counter++;
-
-            }
-            if ( ref $GetParam{$Use} ne 'ARRAY' ) {
-                $GetParam{$Use} = [];
-            }
-        }
-
-        # check if the timeperiod is too big or the time scale too small
-        if (
-            $GetParam{UseAsXvalue}[0]{Block} eq 'Time'
-            && (
-                !$GetParam{UseAsValueSeries}[0]
-                || (
-                    $GetParam{UseAsValueSeries}[0]
-                    && $GetParam{UseAsValueSeries}[0]{Block} ne 'Time'
-                )
-            )
-            )
-        {
-            my $ScalePeriod = $TimeInSeconds{ $GetParam{UseAsXvalue}[0]{SelectedValues}[0] } || 0;
-
-            # integrate this functionality in the completenesscheck
-            if (
-                $TimePeriod / ( $ScalePeriod * $GetParam{UseAsXvalue}[0]{TimeScaleCount} )
-                > ( $ConfigObject->Get('Stats::MaxXaxisAttributes') || 1000 )
-                )
-            {
-                $Kernel::OM->Get('Kernel::System::Log')->Log(
-                    Priority => 'error',
-                    Message =>
-                        "The reporting time interval is too small, please use a larger time scale!",
-                );
-
-                return;
-            }
-        }
-    }
-
-    return %GetParam;
 }
 
 =item StringAndTimestamp2Filename()
@@ -3669,7 +3417,9 @@ sub _GenerateDynamicStats {
 
     my @StatArray = ( [$Title], \@HeaderLine, @DataArray );
 
-    return @StatArray if !$Param{Cache};
+    if (!$Param{Cache} || $Preview) {
+        return @StatArray
+    }
 
     # check if we should cache this result
     if ( !$TitleTimeStart || !$TitleTimeStop ) {

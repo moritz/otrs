@@ -483,6 +483,10 @@ ul.Tablelike li.Header + li {
     position: relative;
 }
 
+.CallForAction:disabled span {
+    color: graytext !important;
+}
+
 .cke_dialog_footer_buttons td a.cke_dialog_ui_button span {
     font-size: 11px;
     line-height: auto;

@@ -20,9 +20,11 @@
                     <li>
                         <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=Overview" class="CallForAction Fullsize Center"><span><i class="fa fa-caret-left"></i>[% Translate("Go to overview") | html %]</span></a>
                     </li>
+                    [% IF Data.Valid %]
                     <li>
                         <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=View;StatID=[% Data.StatID | html %]" class="CallForAction Fullsize Center"><span><i class="fa fa-caret-square-o-right"></i>[% Translate("Run now") | html %]</span></a>
                     </li>
+                    [% END %]
                 </ul>
             </div>
         </div>

@@ -106,10 +106,12 @@
                         </td>
                             [% END %]
                         <td class="Center">
+                            [% IF Data.Valid %]
                             <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=View;StatID=[% Data.StatID | uri %]" class="AsBlock">
                                 <i class="fa fa-caret-square-o-right"></i>
                                     [% Translate('Run now') | html %]
                             </a>
+                            [% END %]
                         </td>
                     </tr>
 [% RenderBlockEnd("Result") %]
