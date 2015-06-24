@@ -16,7 +16,13 @@
 
 [% IF Data.StatConfigurationValid %]
 
-    [% IF Data.StatResultData %]
+    [% IF !Data.StatParametersValid %]
+
+        <div class="MessageBox Warning">
+            <p>[% Translate('The configuration for this statistic widget contains errors, please review your settings.') | html %]</p>
+        </div>
+
+    [% ELSIF Data.StatResultData %]
 
         [% IF Data.Format %]
 

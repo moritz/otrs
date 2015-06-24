@@ -80,6 +80,21 @@ sub Preferences {
         $FilteredFormats{$Key} = $Format{$Key} if $Key =~ m{^D3}smx;
     }
 
+    my @Errors;
+
+    my %GetParam = eval {
+        $Self->{StatsViewObject}->StatParamsGet(
+            Stat         => $Stat,
+            UserGetParam => $StatsSettings,
+        );
+    };
+
+    if ( $@ || ref $@ eq 'ARRAY' ) {
+        @Errors = @{$@};
+    }
+
+    # Fetch the stat again as StatsParamGet might have modified it in between.
+    $Stat = $Self->{StatsObject}->StatsGet( StatID => $StatID );
     my $StatsViewParameterWidget = $Self->{StatsViewObject}->StatsViewParameterWidget(
         Stat         => $Stat,
         UserGetParam => $StatsSettings,
@@ -97,6 +112,7 @@ sub Preferences {
         TemplateFile => 'AgentDashboardStatsSettings',
         Data         => {
             %{$Stat},
+            Errors                   => \@Errors,
             JSONFieldName            => $Self->{PrefKeyStatsConfiguration},
             NamePref                 => $Self->{Name},
             StatsViewParameterWidget => $StatsViewParameterWidget,
@@ -149,9 +165,18 @@ sub Run {
         Errors => {},
     );
 
+    my $StatParametersValid;
+    eval {
+        $Self->{StatsViewObject}->StatParamsGet(
+            Stat         => $Stat,
+            UserGetParam => $StatsSettings,
+        );
+        $StatParametersValid = 1;
+    };
+
     my $CachedData;
 
-    if ($StatConfigurationValid) {
+    if ( $StatConfigurationValid && $StatParametersValid ) {
         $CachedData = $Self->{StatsObject}->StatsResultCacheGet(
             StatID       => $StatID,
             UserGetParam => $StatsSettings,
@@ -198,6 +223,7 @@ sub Run {
         Data         => {
             Name                              => $Self->{Name},
             StatConfigurationValid            => $StatConfigurationValid,
+            StatParametersValid               => $StatParametersValid,
             StatResultData                    => $CachedData,
             Stat                              => $Stat,
             Format                            => $Format,
