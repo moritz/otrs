@@ -6,7 +6,9 @@
 # did not receive this file, see http://www.gnu.org/licenses/agpl.txt.
 # --
 
-[% IF Data.StatsData %]
+[% IF Data.StatConfigurationValid %]
+
+[% IF Data.StatResultData %]
 [% IF Data.Format %]
 
 <svg style="height: 350px;" class="GraphWidget[% Data.Name | html %]" id="GraphWidget[% Data.Name | html %]"></svg>
@@ -40,7 +42,7 @@ Core.Config.Set('Pref-GraphWidget[% Data.Name | html %]', [% Data.Preferences %]
     }
 
     window.setTimeout(function () {
-        Core.UI.AdvancedChart.Init([% ChartTypes.item(Data.Format) | JSON %], [% JSON(Data.StatsData) %], 'svg.GraphWidget[% Data.Name | html %]');
+        Core.UI.AdvancedChart.Init([% ChartTypes.item(Data.Format) | JSON %], [% JSON(Data.StatResultData) %], 'svg.GraphWidget[% Data.Name | html %]');
     }, Timeout);
 }());
 //]]></script>
@@ -101,5 +103,13 @@ $('#GraphWidgetLink[% Data.Name | html %]').closest('.Header').bind('mouseleave.
 
 <i class="fa fa-signal" style="display: block; margin-bottom: 3px; font-size: 20px; text-align: center; color: #E77A34;"></i>
 <p class="Center FieldExplanation">[% Translate("The content of this statistic is being prepared for you, please be patient.") | html %]</p>
+
+[% END %]
+
+[% ELSE %]
+
+<div class="MessageBox Warning" id="StatsConigurationError[% Data.NamePref | html %]">
+    <p>[% Translate('This statistic contains configuration errors and can currently not be used.') | html %]</p>
+</div>
 
 [% END %]

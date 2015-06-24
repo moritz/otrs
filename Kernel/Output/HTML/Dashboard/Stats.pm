@@ -33,6 +33,13 @@ sub new {
     # Settings
     $Self->{PrefKeyStatsConfiguration} = 'UserDashboardStatsStatsConfiguration' . $Self->{Name};
 
+    $Self->{StatsObject} = Kernel::System::Stats->new(
+        UserID => $Self->{UserID},
+    );
+    $Self->{StatsViewObject} = Kernel::Output::HTML::Statistics::View->new(
+        StatsObject => $Self->{StatsObject},
+    );
+
     return $Self;
 }
 
@@ -42,16 +49,7 @@ sub Preferences {
     # get StatID
     my $StatID = $Self->{Config}->{StatID};
 
-    # get stats object
-    my $StatsObject = Kernel::System::Stats->new(
-        UserID => $Self->{UserID},
-    );
-
-    my $StatsViewObject = Kernel::Output::HTML::Statistics::View->new(
-        StatsObject => $StatsObject,
-    );
-
-    my $Stat = $StatsObject->StatsGet( StatID => $StatID );
+    my $Stat = $Self->{StatsObject}->StatsGet( StatID => $StatID );
 
     # get the object name
     if ( $Stat->{StatType} eq 'static' ) {
@@ -62,7 +60,7 @@ sub Preferences {
     $Stat->{ObjectName} ||= '';
 
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
-    my $UserObject = $Kernel::OM->Get('Kernel::System::User');
+    my $UserObject   = $Kernel::OM->Get('Kernel::System::User');
 
     # check if the user has preferences for this widget
     my %Preferences = $UserObject->GetPreferences(
@@ -75,19 +73,25 @@ sub Preferences {
         );
     }
 
-    my %Format = %{ $Kernel::OM->Get('Kernel::Config')->Get('Stats::Format') || {}};
+    my %Format = %{ $Kernel::OM->Get('Kernel::Config')->Get('Stats::Format') || {} };
 
     my %FilteredFormats;
-    for my $Key (sort keys %Format) {
+    for my $Key ( sort keys %Format ) {
         $FilteredFormats{$Key} = $Format{$Key} if $Key =~ m{^D3}smx;
     }
 
-    my $StatsViewParameterWidget = $StatsViewObject->StatsViewParameterWidget(
+    my $StatsViewParameterWidget = $Self->{StatsViewObject}->StatsViewParameterWidget(
         Stat         => $Stat,
         UserGetParam => $StatsSettings,
         IsCacheable  => 1,
         Formats      => \%FilteredFormats,
     );
+
+    # This indicates that there are configuration errors in the statistic.
+    # In that case we show a warning in Run() and no configuration here.
+    if ( !$StatsViewParameterWidget ) {
+        return;
+    }
 
     my $SettingsHTML = $LayoutObject->Output(
         TemplateFile => 'AgentDashboardStatsSettings',
@@ -138,22 +142,28 @@ sub Run {
         );
     }
 
-    # get stats object
-    my $StatsObject = Kernel::System::Stats->new(
-        UserID => $Self->{UserID},
+    my $Stat = $Self->{StatsObject}->StatsGet( StatID => $StatID );
+
+    my $StatConfigurationValid = $Self->{StatsViewObject}->ValidateStatsConfiguration(
+        Stat   => $Stat,
+        Errors => {},
     );
 
-    my $CachedData = $StatsObject->StatsResultCacheGet(
-        StatID       => $StatID,
-        UserGetParam => $StatsSettings,
-    );
+    my $CachedData;
+
+    if ($StatConfigurationValid) {
+        $CachedData = $Self->{StatsObject}->StatsResultCacheGet(
+            StatID       => $StatID,
+            UserGetParam => $StatsSettings,
+        );
+    }
 
     my $Format = $StatsSettings->{Format};
-    if (!$Format) {
-        my $Stat = $StatsObject->StatsGet( StatID => $StatID );
+    if ( !$Format ) {
+        my $Stat = $Self->{StatsObject}->StatsGet( StatID => $StatID );
         STATFORMAT:
-        for my $StatFormat (@{$Stat->{Format} || []}) {
-            if ($StatFormat =~ m{^D3}smx) {
+        for my $StatFormat ( @{ $Stat->{Format} || [] } ) {
+            if ( $StatFormat =~ m{^D3}smx ) {
                 $Format = $StatFormat;
                 last STATFORMAT;
             }
@@ -161,7 +171,6 @@ sub Run {
     }
 
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
-    my $Stat = $StatsObject->StatsGet( StatID => $StatID );
 
     # check permission for AgentStats
     my $StatsReg = $Kernel::OM->Get('Kernel::Config')->Get('Frontend::Module')->{'AgentStatistics'};
@@ -187,10 +196,11 @@ sub Run {
     my $Content = $LayoutObject->Output(
         TemplateFile => 'AgentDashboardStats',
         Data         => {
-            Name => $Self->{Name},
-            StatsData => $CachedData,
-            Stat      => $Stat,
-            Format    => $Format,
+            Name                              => $Self->{Name},
+            StatConfigurationValid            => $StatConfigurationValid,
+            StatResultData                    => $CachedData,
+            Stat                              => $Stat,
+            Format                            => $Format,
             AgentStatisticsFrontendPermission => $AgentStatisticsFrontendPermission,
             Preferences => $Preferences{ 'GraphWidget' . $Self->{Name} } || '{}',
         },

@@ -6,8 +6,6 @@
 # did not receive this file, see http://www.gnu.org/licenses/agpl.txt.
 # --
 
-[% IF Data.StatsViewParameterWidget %]
-
 <input type="hidden" name="[% Data.JSONFieldName | html %]" class="StatsSettingsJSON" />
 <div class="StatsSettingsBox" id="StatsSettingsBox[% Data.NamePref | html %]">
 
@@ -19,20 +17,3 @@ Core.Agent.Dashboard.InitStatsConfiguration($('#StatsSettingsBox[% Data.NamePref
 //]]></script>
 [% END %]
 </div>
-
-[% ELSE %]
-
-<div class="MessageBox Warning" id="StatsConigurationError[% Data.NamePref | html %]">
-    <p>
-        [% Translate('This statistic contains configuration errors and can currently not be used.') | html %]
-    </p>
-</div>
-
-[% WRAPPER JSOnDocumentComplete %]
-<script type="text/javascript">//<![CDATA[
-console.log($('#StatsConigurationError[% Data.NamePref | html %]').parent('fieldset').find('.Buttons button[value=Submit]').length);
-$('#StatsConigurationError[% Data.NamePref | html %]').parent('fieldset').find('.Buttons button[value=Submit]').prop('disabled', true);
-//]]></script>
-[% END %]
-
-[% END %]
