@@ -14,15 +14,9 @@ use warnings;
 use List::Util qw( first );
 
 use Kernel::System::VariableCheck qw(:all);
-
-#use Kernel::Language qw(Translatable);
+use Kernel::Language qw(Translatable);
 
 our $ObjectManagerDisabled = 1;
-
-# TODO remove after notification merge in master
-sub Translatable {
-    return shift;
-}
 
 sub new {
     my ( $Type, %Param ) = @_;

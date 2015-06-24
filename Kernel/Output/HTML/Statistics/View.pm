@@ -31,6 +31,13 @@ our @ObjectDependencies = (
     'Kernel::System::Web::Request',
 );
 
+# TODO: this breaks from the Dashboard. No idea why.
+#use Kernel::Language qw(Translatable);
+
+sub Translatable {
+    return shift;
+}
+
 sub new {
     my ( $Type, %Param ) = @_;
 
@@ -591,7 +598,7 @@ sub StatsViewParameterWidget {
     }
 
     $Output .= $LayoutObject->Output(
-        TemplateFile => 'AgentStatistics/StatsViewParameterWidget',
+        TemplateFile => 'Statistics/StatsViewParameterWidget',
         Data         => {
             %{$Stat},
         },
@@ -782,7 +789,7 @@ sub GeneralSpecificationsWidget {
     );
 
     my $Output .= $LayoutObject->Output(
-        TemplateFile => 'AgentStatistics/GeneralSpecificationsWidget',
+        TemplateFile => 'Statistics/GeneralSpecificationsWidget',
         Data         => {
             %Frontend,
             %{$Stat},
@@ -887,7 +894,7 @@ sub XAxisWidget {
     }
 
     my $Output .= $LayoutObject->Output(
-        TemplateFile => 'AgentStatistics/XAxisWidget',
+        TemplateFile => 'Statistics/XAxisWidget',
         Data         => {
             %{$Stat},
         },
@@ -1012,7 +1019,7 @@ sub YAxisWidget {
     }
 
     my $Output .= $LayoutObject->Output(
-        TemplateFile => 'AgentStatistics/YAxisWidget',
+        TemplateFile => 'Statistics/YAxisWidget',
         Data         => {
             %{$Stat},
         },
@@ -1125,7 +1132,7 @@ sub RestrictionsWidget {
     }
 
     my $Output .= $LayoutObject->Output(
-        TemplateFile => 'AgentStatistics/RestrictionsWidget',
+        TemplateFile => 'Statistics/RestrictionsWidget',
         Data         => {
             %{$Stat},
         },
@@ -1158,7 +1165,7 @@ sub PreviewContainer {
     }
 
     my $Output .= $LayoutObject->Output(
-        TemplateFile => 'AgentStatistics/PreviewContainer',
+        TemplateFile => 'Statistics/PreviewContainer',
         Data         => {
             %{$Stat},
             %Frontend,
@@ -1461,7 +1468,7 @@ sub RenderStatisticsResultData {
                 ],
                 %Param,
             },
-            TemplateFile => 'AgentStatistics/RenderStatisticsResultData/D3',
+            TemplateFile => 'Statistics/RenderStatisticsResultData/D3',
         );
         $Output .= $LayoutObject->Footer(
             Type => 'Small',
@@ -1647,7 +1654,7 @@ sub RenderStatisticsResultData {
                     HeaderRow => $HeadArrayRef,
                     DataRows  => \@StatArray,
                 },
-                TemplateFile => 'AgentStatistics/RenderStatisticsResultData/Print',
+                TemplateFile => 'Statistics/RenderStatisticsResultData/Print',
             );
             $Output .= $LayoutObject->PrintFooter();
             return $Output;
@@ -1687,11 +1694,6 @@ sub RenderStatisticsResultData {
             Type        => 'attachment',             # not inline because of bug# 2757
         );
     }
-}
-
-# TODO remove after merge
-sub Translatable {
-    return shift;
 }
 
 =item ValidateStatsConfiguration()
@@ -1843,13 +1845,13 @@ sub ValidateStatsConfiguration {
 
                 if ( $Restriction->{Block} eq 'SelectField' ) {
                     if ( $Restriction->{Fixed} && $#{ $Restriction->{SelectedValues} } > 0 ) {
-                        $RestrictionsFieldErrors{ $Restriction->{Element} } = Translate(
+                        $RestrictionsFieldErrors{ $Restriction->{Element} } = Translatable(
                             'Please select only one element or allow modification at stat generation time.'
                         );
                     }
                     elsif ( !$Restriction->{SelectedValues}[0] ) {
                         $RestrictionsFieldErrors{ $Restriction->{Element} }
-                            = Translate('Please select at least one value of this field.');
+                            = Translatable('Please select at least one value of this field.');
                     }
                 }
                 elsif (
@@ -1859,7 +1861,7 @@ sub ValidateStatsConfiguration {
                     )
                 {
                     $RestrictionsFieldErrors{ $Restriction->{Element} }
-                        = Translate('Please provide a value or allow modification at stat generation time.');
+                        = Translatable('Please provide a value or allow modification at stat generation time.');
                     last RESTRICTION;
                 }
                 elsif (
@@ -1876,7 +1878,7 @@ sub ValidateStatsConfiguration {
                         );
                         if ( !$TimeStart || !$TimeStop ) {
                             $RestrictionsFieldErrors{ $Restriction->{Element} }
-                                = Translate('The selected date is not valid.');
+                                = Translatable('The selected date is not valid.');
                         }
                         elsif ( $TimeStart > $TimeStop ) {
                             $RestrictionsFieldErrors{ $Restriction->{Element} }
