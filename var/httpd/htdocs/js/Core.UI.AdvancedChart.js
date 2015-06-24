@@ -662,7 +662,7 @@ Core.UI.AdvancedChart = (function (TargetNS) {
             .attr('height', $SVGContainer.css('height'))
             .attr('width', $SVGContainer.css('width'));
 
-        $CanvasContainer = $('<div style="position: absolute; top: 0; visibility: visible;"></div>')
+        $CanvasContainer = $('<div style="position: absolute; top: 0; visibility: hidden;"></div>')
             .append($Canvas)
             .appendTo('body');
 
