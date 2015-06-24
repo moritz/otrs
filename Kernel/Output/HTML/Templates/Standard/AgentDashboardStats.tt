@@ -6,18 +6,30 @@
 # did not receive this file, see http://www.gnu.org/licenses/agpl.txt.
 # --
 
+## nofilter(TidyAll::Plugin::OTRS::TT::Format)
+
 [% IF Data.StatConfigurationValid %]
 
-[% IF Data.StatResultData %]
-[% IF Data.Format %]
+    [% IF Data.StatResultData %]
 
-<svg style="height: 350px;" class="GraphWidget[% Data.Name | html %]" id="GraphWidget[% Data.Name | html %]"></svg>
+        [% IF Data.Format %]
 
-[% SET ChartTypes = {
-'D3::MultiBarChart'    => 'Bar',
-'D3::MultiLineChart'   => 'Line',
-'D3::StackedAreaChart' => 'StackedArea',
-} %]
+            <div id="GraphWidgetContainer[% Data.Name | html %]">
+                <svg style="height: 350px;" class="GraphWidget[% Data.Name | html %]" id="GraphWidget[% Data.Name | html %]"></svg>
+            </div>
+
+            <a class="CallForAction" id="DownloadSVG[% Data.Name | html %]" href="#" download="[% Data.Stat.Title | html %].svg">
+                <span>[% Translate('Download SVG') | html %]</span>
+            </a>
+            <a class="CallForAction" id="DownloadPNG[% Data.Name | html %]" href="#" download="[% Data.Stat.Title | html %].png">
+                <span>[% Translate('Download PNG') | html %]</span>
+            </a>
+
+            [% SET ChartTypes = {
+                'D3::MultiBarChart'    => 'Bar',
+                'D3::MultiLineChart'   => 'Line',
+                'D3::StackedAreaChart' => 'StackedArea',
+            } %]
 
 [% WRAPPER JSOnDocumentComplete %]
 <script type="text/javascript">//<![CDATA[
@@ -44,34 +56,42 @@ Core.Config.Set('Pref-GraphWidget[% Data.Name | html %]', [% Data.Preferences %]
     window.setTimeout(function () {
         Core.UI.AdvancedChart.Init([% ChartTypes.item(Data.Format) | JSON %], [% JSON(Data.StatResultData) %], 'svg.GraphWidget[% Data.Name | html %]');
     }, Timeout);
+
+    $('#DownloadSVG[% Data.Name | html %]').on('click', function() {
+        this.href = 'data:image/svg+xml;base64,' + btoa($('#GraphWidgetContainer[% Data.Name | html %]').html());
+    });
+
+    $('#DownloadPNG[% Data.Name | html %]').on('click', function() {
+        this.href = Core.UI.AdvancedChart.ConvertSVGtoPNG($('#GraphWidgetContainer[% Data.Name | html %]'));
+    });
 }());
 //]]></script>
 [% END %]
 
-[% SET AvailableFormats = Data.Stat.Format %]
-[% IF Data.AgentStatisticsFrontendPermission && AvailableFormats.grep('^(CSV|Print|Excel)$').size %]
-<div class="WidgetAction" id="GraphWidgetLink[% Data.Name | html %]">
-    <a href="#" class="TriggerTooltip" title="[% Translate("Download") | html %]">
-        <i class="fa fa-download"></i>
-    </a>
-    <span class="Hidden WidgetTooltip">
-[% IF AvailableFormats.grep('^CSV$').size %]
-        <a href="[% Env("Baselink") %]Action=AgentStats;Subaction=Run;Cached=1;StatID=[% Data.StatID | uri %];Format=CSV;Name=[% Data.Name | uri %]">
-            [% Translate("Download as CSV file") | html %]
-        </a>
-[% END %]
-[% IF AvailableFormats.grep('^Excel$').size %]
-        <a href="[% Env("Baselink") %]Action=AgentStats;Subaction=Run;Cached=1;StatID=[% Data.StatID | uri %];Format=Excel;Name=[% Data.Name | uri %]">
-            [% Translate("Download as Excel file") | html %]
-        </a>
-[% END %]
-[% IF AvailableFormats.grep('^Print$').size %]
-        <a href="[% Env("Baselink") %]Action=AgentStats;Subaction=Run;Cached=1;StatID=[% Data.StatID | uri %];Format=Print;Name=[% Data.Name | uri %]">
-            [% Translate("Download as PDF file") | html %]
-        </a>
-[% END %]
-    </span>
-</div>
+            [% SET AvailableFormats = Data.Stat.Format %]
+            [% IF Data.AgentStatisticsFrontendPermission && AvailableFormats.grep('^(CSV|Print|Excel)$').size %]
+                <div class="WidgetAction" id="GraphWidgetLink[% Data.Name | html %]">
+                    <a href="#" class="TriggerTooltip" title="[% Translate("Download") | html %]">
+                        <i class="fa fa-download"></i>
+                    </a>
+                    <span class="Hidden WidgetTooltip">
+                    [% IF AvailableFormats.grep('^CSV$').size %]
+                        <a href="[% Env("Baselink") %]Action=AgentStats;Subaction=Run;Cached=1;StatID=[% Data.StatID | uri %];Format=CSV;Name=[% Data.Name | uri %]">
+                            [% Translate("Download as CSV file") | html %]
+                        </a>
+                    [% END %]
+                    [% IF AvailableFormats.grep('^Excel$').size %]
+                        <a href="[% Env("Baselink") %]Action=AgentStats;Subaction=Run;Cached=1;StatID=[% Data.StatID | uri %];Format=Excel;Name=[% Data.Name | uri %]">
+                            [% Translate("Download as Excel file") | html %]
+                        </a>
+                    [% END %]
+                    [% IF AvailableFormats.grep('^Print$').size %]
+                        <a href="[% Env("Baselink") %]Action=AgentStats;Subaction=Run;Cached=1;StatID=[% Data.StatID | uri %];Format=Print;Name=[% Data.Name | uri %]">
+                            [% Translate("Download as PDF file") | html %]
+                        </a>
+                    [% END %]
+                    </span>
+                </div>
 
 [% WRAPPER JSOnDocumentComplete %]
 <script type="text/javascript">//<![CDATA[
@@ -89,27 +109,27 @@ $('#GraphWidgetLink[% Data.Name | html %]').closest('.Header').bind('mouseleave.
 //]]></script>
 [% END %]
 
-[% END %]
+            [% END %]
+
+        [% ELSE %]
+
+            <div class="MessageBox Warning">
+                <p>[% Translate('Please select a valid graph output format in the configuration of this widget.') | html %]</p>
+            </div>
+
+        [% END %]
+
+    [% ELSE %]
+
+        <i class="fa fa-signal" style="display: block; margin-bottom: 3px; font-size: 20px; text-align: center; color: #E77A34;"></i>
+        <p class="Center FieldExplanation">[% Translate("The content of this statistic is being prepared for you, please be patient.") | html %]</p>
+
+    [% END %]
 
 [% ELSE %]
 
-<div class="MessageBox Warning">
-    <p>[% Translate('Please select a valid graph output format in the configuration of this widget.') | html %]</p>
-</div>
-
-[% END %]
-
-[% ELSE %]
-
-<i class="fa fa-signal" style="display: block; margin-bottom: 3px; font-size: 20px; text-align: center; color: #E77A34;"></i>
-<p class="Center FieldExplanation">[% Translate("The content of this statistic is being prepared for you, please be patient.") | html %]</p>
-
-[% END %]
-
-[% ELSE %]
-
-<div class="MessageBox Warning" id="StatsConigurationError[% Data.NamePref | html %]">
-    <p>[% Translate('This statistic contains configuration errors and can currently not be used.') | html %]</p>
-</div>
+    <div class="MessageBox Warning" id="StatsConigurationError[% Data.NamePref | html %]">
+        <p>[% Translate('This statistic contains configuration errors and can currently not be used.') | html %]</p>
+    </div>
 
 [% END %]

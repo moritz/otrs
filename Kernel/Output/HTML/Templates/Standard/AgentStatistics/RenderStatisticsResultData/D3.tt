@@ -23,24 +23,23 @@
         <svg class="" id="ChartContent" style="min-height: 500px"></svg>
     </div>
 
-    <a id="download-svg" class="" download="[% Data.Title | html %].svg">SVG</a>
-    <a id="download-png" class="Hidden"  download="[% Data.Title | html %].png">PNG</a>
+    <a id="download-svg" class="CallForAction" download="[% Data.Title | html %].svg">
+        <span>[% Translate('Download SVG') | html %]</span>
+    </a>
+    <a id="download-png" class="CallForAction" download="[% Data.Title | html %].png">
+        <span>[% Translate('Download PNG') | html %]</span>
+    </a>
 
 [% WRAPPER JSOnDocumentComplete %]
 
 <script type="text/javascript">
 $('#download-svg').on('click', function() {
     this.href = 'data:image/svg+xml;base64,' + btoa($('#svg-container').html());
-    link.download = 'test.svg';
 });
-    Core.UI.AdvancedChart.Init([% ChartTypes.item(Data.Format) | JSON %], [% JSON(Data.RawData) %], 'svg#ChartContent');
-
-    window.setTimeout(function(){
-        Core.UI.AdvancedChart.ConvertSVGtoPNG($('#svg-container'), function( DataURI ) {
-            $('a#download-png').attr('href', DataURI).show();
-        });
-    }, 1000);
-
+$('#download-png').on('click', function() {
+    this.href = Core.UI.AdvancedChart.ConvertSVGtoPNG($('#svg-container'));
+});
+Core.UI.AdvancedChart.Init([% ChartTypes.item(Data.Format) | JSON %], [% JSON(Data.RawData) %], 'svg#ChartContent');
 </script>
 [% END %]
 
