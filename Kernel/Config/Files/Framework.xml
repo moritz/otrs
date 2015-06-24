@@ -4388,6 +4388,9 @@ via the Preferences button after logging in.
                     <JavaScript>thirdparty/nvd3-1.7.1/nvd3.min.js</JavaScript>
                     <JavaScript>thirdparty/nvd3-1.7.1/models/OTRSMultiBarChart.js</JavaScript>
                     <JavaScript>thirdparty/nvd3-1.7.1/models/OTRSStackedAreaChart.js</JavaScript>
+                    <JavaScript>thirdparty/canvg-1.0/rgbcolor.js</JavaScript>
+                    <JavaScript>thirdparty/canvg-1.0/StackBlur.js</JavaScript>
+                    <JavaScript>thirdparty/canvg-1.0/canvg.js</JavaScript>
                     <JavaScript>Core.UI.AdvancedChart.js</JavaScript>
                     <JavaScript>Core.UI.AllocationList.js</JavaScript>
                     <JavaScript>Core.Agent.TableFilters.js</JavaScript>
@@ -5424,6 +5427,9 @@ via the Preferences button after logging in.
                     <JavaScript>thirdparty/nvd3-1.7.1/nvd3.min.js</JavaScript>
                     <JavaScript>thirdparty/nvd3-1.7.1/models/OTRSMultiBarChart.js</JavaScript>
                     <JavaScript>thirdparty/nvd3-1.7.1/models/OTRSStackedAreaChart.js</JavaScript>
+                    <JavaScript>thirdparty/canvg-1.0/rgbcolor.js</JavaScript>
+                    <JavaScript>thirdparty/canvg-1.0/StackBlur.js</JavaScript>
+                    <JavaScript>thirdparty/canvg-1.0/canvg.js</JavaScript>
                     <JavaScript>Core.Agent.Statistics.js</JavaScript>
                     <JavaScript>Core.UI.AdvancedChart.js</JavaScript>
                     <CSS>thirdparty/nvd3-1.7.1/nv.d3.css</CSS>

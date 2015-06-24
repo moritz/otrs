@@ -643,5 +643,51 @@ Core.UI.AdvancedChart = (function (TargetNS) {
         }
     };
 
+    /**
+     * @name ConvertSVGtoPNG
+     * @memberof Core.UI.AdvancedChart
+     * @function
+     * @param {jQueryObject} $SVGContainer - The element containing the SVG element. There should be no other content.
+     * @param {function} FinishCallback - This function will be called when the conversion is finished.
+     *      It receives the data URL for the PNG as a string as function argument.
+     * @description
+     *      Convert an SVG element to a PNG data URL.
+     */
+    TargetNS.ConvertSVGtoPNG = function($SVGContainer, FinishCallback) {
+
+        var SVGContent = $SVGContainer.html().trim(), // Canvg requires trimmed content
+            InitialRedrawDone = false,
+            $CanvasContainer;
+
+        $CanvasContainer = $('<div style="position: absolute; top: 0; visibility: hidden;"></div>')
+            .css('height', $SVGContainer.css('height'))
+            .css('width', $SVGContainer.css('width'))
+            .append('<canvas></canvas>')
+            .appendTo('body');
+
+        /* This function a) forces another redraw after the first frame as canvg does not draw the full element
+            in the first place, and b) hands over the PNG data to the FinishCallback function.
+        */
+        function HandleRedraw() {
+            // Code for first frame - force redraw.
+            if (!InitialRedrawDone) {
+                InitialRedrawDone = true;
+                return true;
+            }
+
+            // Code for second frame
+            $CanvasContainer.find('canvas').get(0).svg.stop();
+            FinishCallback( $CanvasContainer.find('canvas').get(0).toDataURL('image/png') );
+            $CanvasContainer.find('canvas').remove();
+            return false;
+        }
+        // Draw svg on canvas
+        canvg(
+            $CanvasContainer.find('canvas').get(0),
+            SVGContent,
+            { ignoreMouse: true, ignoreAnimations: true, forceRedraw: HandleRedraw }
+        );
+    };
+
     return TargetNS;
 }(Core.UI.AdvancedChart || {}));

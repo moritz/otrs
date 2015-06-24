@@ -1447,7 +1447,10 @@ sub RenderStatisticsResultData {
 
     # generate D3 output
     if ( $Param{Format} =~ m{^D3} ) {
-        my $Output = $LayoutObject->Header( Value => $Title );
+        my $Output = $LayoutObject->Header(
+            Value => $Title,
+            Type  => 'Small',
+        );
         $Output .= $LayoutObject->Output(
             Data => {
                 %{$Stat},
@@ -1460,7 +1463,9 @@ sub RenderStatisticsResultData {
             },
             TemplateFile => 'AgentStatistics/RenderStatisticsResultData/D3',
         );
-        $Output .= $LayoutObject->Footer();
+        $Output .= $LayoutObject->Footer(
+            Type => 'Small',
+        );
         return $Output;
     }
 

@@ -6,90 +6,42 @@
 # did not receive this file, see http://www.gnu.org/licenses/agpl.txt.
 # --
 
-<script type="text/javascript" src="http://gabelerner.github.io/canvg/rgbcolor.js"></script>
-<script type="text/javascript" src="http://gabelerner.github.io/canvg/StackBlur.js"></script>
-<script type="text/javascript" src="http://gabelerner.github.io/canvg/canvg.js"></script>
+## nofilter(TidyAll::Plugin::OTRS::TT::Format)
 
 [% SET ChartTypes = {
 'D3::MultiBarChart'    => 'Bar',
 'D3::MultiLineChart'   => 'Line',
 'D3::StackedAreaChart' => 'StackedArea',
 } %]
-<table border="0" width="100%" cellspacing="0" cellpadding="3">
-    <tr>
-        <td class="contenthead">
-            [% Translate("Print") | html %]: [% Translate(Config("Stats::StatsHook")) | html %] [% Data.StatNumber | html %]
-        </td>
-    </tr>
-    <tr>
-        <td class="contentbody">
-            <table width="100%" border="0">
-                <tr>
-                    <td class="contentkey">
-                        [% Translate("Title") | html %]: [% Data.Title %]
-                    </td>
-                </tr>
-                <tr>
-                    <td colspan="2">
-                        <div id="svg-container">
-                            <svg class="" id="ChartContent" style="min-height: 500px"></svg>
-                        </div>
+
+<div class="MainBox AriaRoleMain">
+    <h1>
+        [% Data.Title | html %] ([% Translate(Config("Stats::StatsHook")) | html %][% Data.StatNumber | html %])
+    </h1>
+
+    <div id="svg-container">
+        <svg class="" id="ChartContent" style="min-height: 500px"></svg>
+    </div>
+
+    <a id="download-svg" class="" download="[% Data.Title | html %].svg">SVG</a>
+    <a id="download-png" class="Hidden"  download="[% Data.Title | html %].png">PNG</a>
+
 [% WRAPPER JSOnDocumentComplete %]
-<script type="text/javascript">
-    Core.UI.AdvancedChart.Init([% ChartTypes.item(Data.Format) | JSON %], [% JSON(Data.RawData) %], 'svg#ChartContent');
-</script>
-[% END %]
-</td>
-</tr>
-</table>
-<div style="height: 500px; width: 1000px; position: absolute; top: 0; visibility: hidden;">
-<canvas id="canvas" style="display: none;"></canvas>
-</div>
-<a id="download-svg" target="_blank" class="">SVG</a>
-<a id="download-png" class="Hidden" download="test.png">PNG</a>
-[% WRAPPER JSOnDocumentComplete %]
+
 <script type="text/javascript">
 $('#download-svg').on('click', function() {
     this.href = 'data:image/svg+xml;base64,' + btoa($('#svg-container').html());
     link.download = 'test.svg';
 });
+    Core.UI.AdvancedChart.Init([% ChartTypes.item(Data.Format) | JSON %], [% JSON(Data.RawData) %], 'svg#ChartContent');
 
-function ConvertSVGtoPNG($SVGContainer, $TargetLink, FinishCallback) {
-    var // Canvg requires trimmed content
-        SVGContent = $SVGContainer.html().trim(),
-        initialRedrawDone = false;
-
-    var $CanvasContainer = $('<div id="canvas-container" style="position: absolute; top: 0; visibility: hidden;"></div>');
-    $CanvasContainer.css('height', $SVGContainer.css('height'));
-    $CanvasContainer.css('width', $SVGContainer.css('width'));
-    $CanvasContainer.append('<canvas id="SVG2PNGCanvas" style=""></canvas>');
-    $CanvasContainer.appendTo('body');
-
-    function HandleRedraw() {
-        if (initialRedrawDone) {
-            $TargetLink.attr('href', $('#SVG2PNGCanvas').get(0).toDataURL('image/png'));
-            $('#SVG2PNGCanvas').get(0).svg.stop()
-            $('#canvas-container').remove();
-            FinishCallback();
-            return false;
-        }
-        initialRedrawDone = true;
-        return true;
-    }
-    // Draw svg on canvas
-    canvg($CanvasContainer.find('canvas').get(0), SVGContent, { ignoreMouse: true, ignoreAnimations: true, forceRedraw: HandleRedraw });
-
-}
-
-window.setTimeout(function(){
-    ConvertSVGtoPNG($('#svg-container'), $('#download-png'), function(){ $('a').show(); });
-}, 1000);
+    window.setTimeout(function(){
+        Core.UI.AdvancedChart.ConvertSVGtoPNG($('#svg-container'), function( DataURI ) {
+            $('a#download-png').attr('href', DataURI).show();
+        });
+    }, 1000);
 
 </script>
 [% END %]
-</td>
-</tr>
-<tr>
-<td class="contentfooter">&nbsp;</td>
-</tr>
-</table>
+
+</div>
