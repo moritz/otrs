@@ -71,21 +71,19 @@ sub _InstallOTRSExtensions {
     $Context->stash()->set(
         'PerformRenderBlock',
         sub {
-            my $output = '';
-            my ( %_tt_args, $_tt_params );
-            $_tt_args{'BlockName'} = shift;
-            $_tt_params = shift;
+            my ( %_tt_args, $_tt_params, $output );
+            $output = '';
+            ( $_tt_args{'BlockName'}, $_tt_params ) = @_;
             $_tt_params = {} if ref $_tt_params ne 'HASH';
             $_tt_params = { %_tt_args, %$_tt_params };
 
             my $stash = $Context->localise($_tt_params);
             eval {
 
-                my $BlockName = $stash->get('BlockName');
                 my $ParentBlock = $stash->get('ParentBlock') || $stash->{_BlockTree};
-
-                return if !exists $ParentBlock->{Children};
-                return if !exists $ParentBlock->{Children}->{$BlockName};
+                my $BlockName = $stash->get('BlockName');
+                return if !exists $ParentBlock->{Children}
+                       || !exists $ParentBlock->{Children}->{$BlockName};
 
                 my $TemplateName = $stash->get('template')->{name} // '';
                 $TemplateName = substr( $TemplateName, 0, -3 );    # remove .tt extension
